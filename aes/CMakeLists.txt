@@ -1,6 +1,6 @@
 set(SOURCE_FILES
-    "common.h"
-    "common.cu"
+    "aes_cbr.h"
+    "aes_cbr.cu"
     )
 
 cuda_add_library(aes

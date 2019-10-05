@@ -9,9 +9,14 @@
 #include <cstdio>
 #include "testing_helpers.hpp"
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <string>
 #include "tiny-AES-c/aes.hpp"
+#include <aes/aes_cbr.h>
+//using namespace std;
+
+#define ECB 1
 
 static int test_decrypt_ecb(void)
 {
@@ -47,12 +52,62 @@ static int test_decrypt_ecb(void)
 }
 
 
-int main(int argc, char* argv[]) {
-    
-	printf("hello \n");
+int main(int argc, char** argv) {
 
-	test_decrypt_ecb();
+	if (argc < 2) {
+		printf("Usage: %s filename", argv[0]);
+		return 1;
+	}
 
+	const char *File = argv[1];
+	printf("File: %s\n", File);
+
+	std::ifstream inFile;
+
+	inFile.open(File);
+	if (!inFile) {
+		std::cout << "Unable to open file" << File << std::endl;
+		exit(1); // terminate with error
+	}
+	// seek to end
+	inFile.seekg(0, std::ios::end);
+	int length = inFile.tellg();
+	int padded_length = length + (length % 16);
+	std::cout << length << " : " << padded_length << std::endl;
+	inFile.seekg(0, std::ios::beg); // go back 
+	uint8_t* buffer = new uint8_t[padded_length];
+	uint8_t* outbuff = new uint8_t[padded_length];
+	uint8_t* outbuff2 = new uint8_t[padded_length];
+	inFile.read((char*)&buffer[0], length);
+	memcpy(outbuff, buffer, length);
+
+	// might be best to do this in aes? 
+	// can move later inside 
+	// maybe we just pass 
+	for (int i = length; i < padded_length; i++)
+	{
+		buffer[i] = 0; // pad with zeros
+		outbuff[i] = 0;
+	}
+
+	struct AES_ctx ctx;
+	uint8_t key[32];
+	uint8_t key2[32];
+	for (int i = 0; i < 32; i++) key[i] = i;
+	for (int i = 0; i < 32; i++) key2[i] = i;
+	// read file from input
+	aes::Common::aes_encrypt(buffer,outbuff2,key,padded_length);
+	aes::Common::aes_encrypt_byte(outbuff, outbuff2, key2, padded_length);
+
+	AES_init_ctx(&ctx, key2);
+	AES_ECB_encrypt(&ctx, (uint8_t*)outbuff);
+	//AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
+
+	for (int i = 0; i < padded_length; i++)
+	{
+		std::cout << outbuff[i]; // pad with zeros
+	}
+	std::cout << std::endl;
 
     system("pause"); // stop Win32 console from closing on exit
 
