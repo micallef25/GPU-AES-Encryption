@@ -78,13 +78,14 @@ int main(int argc, char** argv) {
 	uint8_t* buffer = new uint8_t[padded_length];
 	uint8_t* outbuff = new uint8_t[padded_length];
 	uint8_t* outbuff2 = new uint8_t[padded_length];
+	uint8_t* outbuff3 = new uint8_t[padded_length];
 	inFile.read((char*)&buffer[0], length);
 	memcpy(outbuff, buffer, length);
 
 	// might be best to do this in aes? 
 	// can move later inside 
 	// maybe we just pass 
-	for (int i = length; i < padded_length; i++)
+	for (int i = length; i < padded_length+1; i++)
 	{
 		buffer[i] = 0; // pad with zeros
 		outbuff[i] = 0;
@@ -97,10 +98,10 @@ int main(int argc, char** argv) {
 	for (int i = 0; i < 32; i++) key2[i] = i;
 	// read file from input
 	aes::Common::aes_encrypt(buffer,outbuff2,key,padded_length);
-	aes::Common::aes_encrypt_byte(outbuff, outbuff2, key2, padded_length);
+	aes::Common::aes_encrypt_byte(outbuff, outbuff3, key2, padded_length);
 
-	AES_init_ctx(&ctx, key2);
-	AES_ECB_encrypt(&ctx, (uint8_t*)outbuff);
+//	AES_init_ctx(&ctx, key2);
+	//AES_ECB_encrypt(&ctx, (uint8_t*)outbuff);
 	//AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
 
 	for (int i = 0; i < padded_length; i++)
