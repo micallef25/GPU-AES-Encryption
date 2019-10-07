@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <stdint.h>
 
+
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
 
@@ -33,14 +34,31 @@ inline int ilog2ceil(int x) {
     return x == 1 ? 0 : ilog2(x - 1) + 1;
 }
 
+// make enum later
+#define AES128 128
+#define AES196 196
+#define AES256 256
+
+typedef struct aes_info
+{
+	uint8_t* data; // data to decrypt/encrypt
+	uint8_t* keys;
+	uint8_t* key_expand;
+	int rounds; // how many rounds to generate encryption/decryption
+	int words; // hoe many words in a key
+	int type; // 128,196 or 256?
+	int file_length; // excludes padding
+	int padded_length;
+	int expand_length;
+}aes_info;
+
 
 namespace aes {
 	namespace Common {
 
-		int aes_encrypt(uint8_t* in_data, uint8_t* out_data, uint8_t* key, int length);
-
-		int aes_encrypt_byte(uint8_t* in_data, uint8_t* out_data, uint8_t* key, int length);
-
+		aes_info* create_aes_struct(std::string File, int type);
+		void destroy_aes_struct(aes_info* aes);
+		void KeyExpansion(uint8_t* RoundKey, const uint8_t* Key);
 		/**
 		* This class is used for timing the performance
 		* Uncopyable and unmovable
@@ -50,6 +68,7 @@ namespace aes {
 		class PerformanceTimer
 		{
 		public:
+
 			PerformanceTimer()
 			{
 				cudaEventCreate(&event_start);
