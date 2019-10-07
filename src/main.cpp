@@ -13,102 +13,96 @@
 #include <fstream>
 #include <string>
 #include "tiny-AES-c/aes.hpp"
-#include <aes/aes_cbr.h>
-//using namespace std;
-
-#define ECB 1
-
-static int test_decrypt_ecb(void)
-{
-#if defined(AES256)
-	uint8_t key[] = { 0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
-					  0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4 };
-	uint8_t in[] = { 0xf3, 0xee, 0xd1, 0xbd, 0xb5, 0xd2, 0xa0, 0x3c, 0x06, 0x4b, 0x5a, 0x7e, 0x3d, 0xb1, 0x81, 0xf8 };
-#elif defined(AES192)
-	uint8_t key[] = { 0x8e, 0x73, 0xb0, 0xf7, 0xda, 0x0e, 0x64, 0x52, 0xc8, 0x10, 0xf3, 0x2b, 0x80, 0x90, 0x79, 0xe5,
-					  0x62, 0xf8, 0xea, 0xd2, 0x52, 0x2c, 0x6b, 0x7b };
-	uint8_t in[] = { 0xbd, 0x33, 0x4f, 0x1d, 0x6e, 0x45, 0xf2, 0x5f, 0xf7, 0x12, 0xa2, 0x14, 0x57, 0x1f, 0xa5, 0xcc };
-#elif defined(AES128)
-	uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
-	uint8_t in[] = { 0x3a, 0xd7, 0x7b, 0xb4, 0x0d, 0x7a, 0x36, 0x60, 0xa8, 0x9e, 0xca, 0xf3, 0x24, 0x66, 0xef, 0x97 };
-#endif
-
-	uint8_t out[] = { 0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96, 0xe9, 0x3d, 0x7e, 0x11, 0x73, 0x93, 0x17, 0x2a };
-	struct AES_ctx ctx;
-
-	AES_init_ctx(&ctx, key);
-	AES_ECB_decrypt(&ctx, in);
-
-	printf("ECB decrypt: ");
-
-	if (0 == memcmp((char*)out, (char*)in, 16)) {
-		printf("SUCCESS!\n");
-		return(0);
-	}
-	else {
-		printf("FAILURE!\n");
-		return(1);
-	}
-}
-
+#include <cxxopts.hpp>
+#include <aes/aes_ecb_byte.h>
+#include <aes/aes_ecb_block.h>
+#include <aes/common.h>
+#include <aes/cpu_aes.h>
 
 int main(int argc, char** argv) {
 
-	if (argc < 2) {
-		printf("Usage: %s filename", argv[0]);
-		return 1;
-	}
+	bool benchmark = false;
+	int aes_type = -1;
 
-	const char *File = argv[1];
-	printf("File: %s\n", File);
+	cxxopts::Options options(argv[0], " - this program aes encryption on the CPU, and GPU, benchmark speeds for parallelizing at a block level and byte level");
+	options.add_options()
+		("b,benchmark", "Benchmark", cxxopts::value<bool>(benchmark))
+		("i,input", "Input file for decryption encryption", cxxopts::value<std::string>())
+		("o,output", "Output file to write to", cxxopts::value<std::string>())
+		("k,keysize", "level of encryption, 128,196,256 supported", cxxopts::value<int>()->default_value("128"));
 
-	std::ifstream inFile;
+	auto result = options.parse(argc, argv);
+	auto arguments = result.arguments();
 
-	inFile.open(File);
-	if (!inFile) {
-		std::cout << "Unable to open file" << File << std::endl;
-		exit(1); // terminate with error
-	}
-	// seek to end
-	inFile.seekg(0, std::ios::end);
-	int length = inFile.tellg();
-	int padded_length = length + (length % 16);
-	std::cout << length << " : " << padded_length << std::endl;
-	inFile.seekg(0, std::ios::beg); // go back 
-	uint8_t* buffer = new uint8_t[padded_length];
-	uint8_t* outbuff = new uint8_t[padded_length];
-	uint8_t* outbuff2 = new uint8_t[padded_length];
-	uint8_t* outbuff3 = new uint8_t[padded_length];
-	inFile.read((char*)&buffer[0], length);
-	memcpy(outbuff, buffer, length);
-
-	// might be best to do this in aes? 
-	// can move later inside 
-	// maybe we just pass 
-	for (int i = length; i < padded_length+1; i++)
-	{
-		buffer[i] = 0; // pad with zeros
-		outbuff[i] = 0;
-	}
+	const std::string File = result["input"].as<std::string>();
+	aes_type = result["keysize"].as<int>();
 
 	struct AES_ctx ctx;
 	uint8_t key[32];
-	uint8_t key2[32];
 	for (int i = 0; i < 32; i++) key[i] = i;
-	for (int i = 0; i < 32; i++) key2[i] = i;
-	// read file from input
-	aes::Common::aes_encrypt(buffer,outbuff2,key,padded_length);
-	aes::Common::aes_encrypt_byte(outbuff, outbuff3, key2, padded_length);
+	AES_init_ctx(&ctx, key);
 
-//	AES_init_ctx(&ctx, key2);
-	//AES_ECB_encrypt(&ctx, (uint8_t*)outbuff);
-	//AES_ECB_decrypt(&ctx, (uint8_t*)buffer);
+	aes_info* aes_byte = aes::Common::create_aes_struct(File, aes_type);
+	aes_info* aes_block = aes::Common::create_aes_struct(File, aes_type);
+	aes_info* aes_original = aes::Common::create_aes_struct(File, aes_type);
+	aes_info* aes_cpu = aes::Common::create_aes_struct(File, aes_type);
 
-	for (int i = 0; i < padded_length; i++)
+	aes::block_level::aes_encrypt_block(aes_block);
+	printElapsedTime(aes::block_level::timer().getGpuElapsedTimeForPreviousOperation(), "Encrypt Block level (std::chrono Measured)");
+	aes::byte_level::aes_encrypt_byte(aes_byte);
+	printElapsedTime(aes::byte_level::timer().getGpuElapsedTimeForPreviousOperation(), "Encrypt Byte level (std::chrono Measured)");
+	aes::CPU::cpu_encrypt(&ctx,aes_cpu->data);
+	printElapsedTime(aes::CPU::timer().getCpuElapsedTimeForPreviousOperation(), "Encrypt CPU (std::chrono Measured)");
+
+
+	int padded_length = aes_byte->padded_length;
+
+	int pass = memcmp(aes_byte->data, aes_block->data, padded_length);
+	if (pass == 0)
 	{
-		std::cout << outbuff[i]; // pad with zeros
+		std::cout << "encrypted files similar" << std::endl;
 	}
-	std::cout << std::endl;
+	else {
+		std::cout << "encryption differs " << std::endl;
+	}
+
+	aes::block_level::aes_decrypt_block(aes_block);
+	printElapsedTime(aes::block_level::timer().getGpuElapsedTimeForPreviousOperation(), "Decrypt Block level (std::chrono Measured)");
+	aes::byte_level::aes_decrypt_byte(aes_byte);
+	printElapsedTime(aes::byte_level::timer().getGpuElapsedTimeForPreviousOperation(), "Decrypt Byte level (std::chrono Measured)");
+	aes::CPU::cpu_decrypt(&ctx, aes_cpu->data);
+	printElapsedTime(aes::CPU::timer().getCpuElapsedTimeForPreviousOperation(), "Decrypt CPU (std::chrono Measured)");
+
+	pass = memcmp(aes_original->data, aes_block->data,padded_length);
+	if (pass == 0)
+	{
+		std::cout << "decrypted at a blocklevel successfully" << std::endl;
+	}
+	else {
+		std::cout << "AES failed " << std::endl;
+	}
+	int bytepass = memcmp(aes_original->data, aes_byte->data,padded_length);
+	if (bytepass == 0)
+	{
+		std::cout << "decrypted at a byte level successfully" << std::endl;
+	}
+	else {
+		std::cout << "AES at a byte level failed " << std::endl;
+	}
+    bytepass = memcmp(aes_original->data, aes_cpu->data, padded_length);
+	if (bytepass == 0)
+	{
+		std::cout << "decrypted cpu successfully" << std::endl;
+	}
+	else {
+		std::cout << "AES lib failed " << std::endl;
+		//std::cout << 
+	}
+
+
+	aes::Common::destroy_aes_struct(aes_original);
+	aes::Common::destroy_aes_struct(aes_byte);
+	aes::Common::destroy_aes_struct(aes_block);
 
     system("pause"); // stop Win32 console from closing on exit
 

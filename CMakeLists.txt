@@ -24,6 +24,7 @@ endif()
 include_directories(.)
 add_subdirectory(aes)
 add_subdirectory(tiny-AES-c)
+add_subdirectory(cxxopts)
 
 cuda_add_executable(${CMAKE_PROJECT_NAME}
     "src/main.cpp"
@@ -33,5 +34,6 @@ cuda_add_executable(${CMAKE_PROJECT_NAME}
 target_link_libraries(${CMAKE_PROJECT_NAME}
     aes
 tiny-aes
+cxxopts
     ${CORELIBS}
     )
