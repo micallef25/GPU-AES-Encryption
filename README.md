@@ -39,7 +39,7 @@ Lorem ipsum... (the added text)
 
 # Resources
 
-##Understanding AES encryption/decryption
+## Understanding AES encryption/decryption
 
 * https://tools.ietf.org/html/rfc3686#section-2.1
 * https://www.comparitech.com/blog/information-security/what-is-aes-encryption/
@@ -47,7 +47,7 @@ Lorem ipsum... (the added text)
 * https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch36.html
 * https://engineering.purdue.edu/kak/compsec/NewLectures/Lecture8.pdf
 
-##Text Generation
+## Text Generation
 
 * http://loremfuckingipsum.com/text.php
 
