@@ -13,28 +13,28 @@ namespace aes {
 
 		// call library functions for baseline time
 		// TODO change types
-		void aes::CPU::cpu_encrypt(AES_ctx* ctx, uint8_t* buffer, int padded_length)
+		void aes::CPU::cpu_encrypt(AES_ctx* ctx, uint8_t* buffer, uint32_t padded_length)
 		{
 			timer().startCpuTimer();
 
-			int iterations = padded_length / AES_BLOCKLEN;
+			uint32_t iterations = padded_length / AES_BLOCKLEN;
 
 			// library just does 128 bits at a time .... 
-			for (long i = 0; i < iterations; i++) {
+			for (uint32_t i = 0; i < iterations; i++) {
 				AES_ECB_encrypt(ctx, &buffer[i*AES_BLOCKLEN]);
 			}
 
 			timer().endCpuTimer();
 
 		}
-		void aes::CPU::cpu_decrypt(AES_ctx* ctx, uint8_t* buffer, int padded_length)
+		void aes::CPU::cpu_decrypt(AES_ctx* ctx, uint8_t* buffer, uint32_t padded_length)
 		{
 			timer().startCpuTimer();
 			
-			int iterations = padded_length / AES_BLOCKLEN;
+			uint32_t iterations = padded_length / AES_BLOCKLEN;
 
 			// library just does 128 bits at a time .... 
-			for (long i = 0; i < iterations; i++) {
+			for (uint32_t i = 0; i < iterations; i++) {
 				AES_ECB_decrypt(ctx, &buffer[i*AES_BLOCKLEN]);
 			}
 
@@ -42,8 +42,7 @@ namespace aes {
 		}
 
 		// call library functions for baseline time
-// TODO change types
-		void aes::CPU::cpu_encrypt_ctr(AES_ctx* ctx, uint8_t* buffer, int padded_length)
+		void aes::CPU::cpu_encrypt_ctr(AES_ctx* ctx, uint8_t* buffer, uint32_t padded_length)
 		{
 			timer().startCpuTimer();
 
@@ -53,7 +52,7 @@ namespace aes {
 			timer().endCpuTimer();
 
 		}
-		void aes::CPU::cpu_decrypt_ctr(AES_ctx* ctx, uint8_t* buffer, int padded_length)
+		void aes::CPU::cpu_decrypt_ctr(AES_ctx* ctx, uint8_t* buffer, uint32_t padded_length)
 		{
 			timer().startCpuTimer();
 

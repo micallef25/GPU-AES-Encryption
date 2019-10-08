@@ -64,6 +64,26 @@ int main(int argc, char** argv) {
 	aes::ctr::aes_ctr_encrypt(aes_ctr);
 	printElapsedTime(aes::ctr::timer().getGpuElapsedTimeForPreviousOperation(), "Encrypt CTR Mode (std::chrono Measured)");
 
+
+	int byepass = memcmp(aes_cpu->data, aes_byte->data, aes_byte->padded_length);
+	if (byepass == 0)
+	{
+		std::cout << "encrypted successfully" << std::endl;
+	}
+	else {
+		std::cout << "AES at a byte level failed " << std::endl;
+	}
+
+	int byteass = memcmp(aes_cpu->data, aes_block->data, aes_byte->padded_length);
+	if (byteass == 0)
+	{
+		std::cout << "encrypted successfully" << std::endl;
+	}
+	else {
+		std::cout << "AES at a byte level failed " << std::endl;
+	}
+
+
 	aes::block_level::aes_decrypt_block(aes_block);
 	printElapsedTime(aes::block_level::timer().getGpuElapsedTimeForPreviousOperation(), "Decrypt Block level (std::chrono Measured)");
 	aes::byte_level::aes_decrypt_byte(aes_byte);

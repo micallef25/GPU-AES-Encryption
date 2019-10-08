@@ -14,6 +14,17 @@
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
 
+#define AES_BLOCK_SIZE 16
+#define blockSize1d 128
+#define MAX_EKEY_LENGTH 240
+
+#define F(x)   (((x)<<1) ^ ((((x)>>7) & 1) * 0x1b))
+#define FD(x)  (((x) >> 1) ^ (((x) & 1) ? 0x8d : 0))
+
+// make enum later
+#define _AES128_ 128
+#define _AES192_ 192
+#define _AES256_ 256
 
 /**
  * Check for CUDA errors; print and exit if there was a problem.
@@ -43,10 +54,6 @@ typedef struct IV_struct
 	uint32_t ctr; // counter
 }IV;
 
-// make enum later
-#define _AES128_ 128
-#define _AES196_ 196
-#define _AES256_ 256
 
 typedef struct aes_info
 {

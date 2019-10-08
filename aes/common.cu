@@ -83,7 +83,7 @@ namespace aes {
 				rounds = 10;
 				expand_size = 176;
 			}
-			else if(type == _AES196_)
+			else if(type == _AES192_)
 			{
 				key_bytes = 24;
 				rounds = 12;
@@ -110,8 +110,8 @@ namespace aes {
 
 			// get file and padding length
 			inFile.seekg(0, std::ios::end);
-			int length = inFile.tellg(); // get length
-			int padded_length = ((length % 16) == 0) ? length : length + (16 - (length % 16));
+			uint32_t length = inFile.tellg(); // get length
+			uint32_t padded_length = ((length % 16) == 0) ? length : length + (16 - (length % 16));
 			std::cout << length << " : " << padded_length << std::endl;
 			inFile.seekg(0, std::ios::beg); // go back 
 
@@ -123,12 +123,14 @@ namespace aes {
 			uint8_t* key_expand = new uint8_t[expand_size];
 			memset(key_expand, 0, expand_size*sizeof(uint8_t));
 			
-			// create a generic key need to reinvestigate this?
+			// create a generic key. Could be passed in through CLI but since this program is for benchmarking 
+			// juist create everything as needed
 			for (int i = 0; i < key_bytes; i++) keys[i] = i;
 			
+			//
 			iv->ctr = 0;
 			iv->uiv = 0xDECAFBAD; // classic
-			iv->nonce - 0xB00B; // (;
+			iv->nonce = 0xB00B; // (;
 
 			// finally read data
 			inFile.read((char*)&buffer[0], length);
@@ -143,6 +145,7 @@ namespace aes {
 			
 			// seems sensical to just expand your key here
 			KeyExpansion(key_expand, keys,type);
+			// set all attributes and return new ptr
 			aes->ctr_iv = iv;
 			aes->file_length = length;
 			aes->padded_length = padded_length;
@@ -180,7 +183,7 @@ namespace aes {
 				key_words = 4;
 				rounds = 10;
 			}
-			else if (type == _AES196_)
+			else if (type == _AES192_)
 			{
 				key_words = 6;
 				rounds = 12;

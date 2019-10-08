@@ -10,13 +10,6 @@
 #include <fstream>
 #include <string>
 
-#define AES_BLOCK_SIZE 16
-#define blockSize1d 128
-#define MAX_KEY_EXPAND 240
-
-#define F(x)   (((x)<<1) ^ ((((x)>>7) & 1) * 0x1b))
-#define FD(x)  (((x) >> 1) ^ (((x) & 1) ? 0x8d : 0))
-
 
 namespace aes {
 	namespace byte_level {
@@ -106,60 +99,58 @@ namespace aes {
 		}
 
 		// subbyte operation
-		__device__ void aes_subBytes_byte(int index, uint8_t *buf)
+		__device__ void aes_subBytes_byte(uint32_t index, uint8_t *buf)
 		{
-			//int key_index = index >= 16 ? index - 16 : index;
 			uint8_t b;
 			b = buf[index];
 			buf[index] = sbox[b];
 		}
 
 		// subbyte operation
-		__device__ void aes_subBytes_inv_byte(int index, uint8_t *buf)
+		__device__ void aes_subBytes_inv_byte(uint32_t index, uint8_t *buf)
 		{
-			//int key_index = index >= 16 ? index - 16 : index;
 			uint8_t b;
 			b = buf[index];
 			buf[index] = sboxinv[b];
 		}
 
 		// add round key operation
-		__device__ void aes_addRoundKey_byte(int map_index,int index, uint8_t *buf, uint8_t *key)
+		__device__ void aes_addRoundKey_byte(uint32_t map_index, uint32_t index, uint8_t *buf, uint8_t *key)
 		{
 			// key is only 16,24, or 32 bytes so we need where we would go
 			buf[index] ^= key[map_index];
 		}
 
 		// shift row operation
-		__device__ void aes_shiftRows_byte(int index, uint8_t* buf, uint8_t* map_buf_s)
+		__device__ void aes_shiftRows_byte(uint32_t index, uint8_t* buf, uint8_t* map_buf_s)
 		{
 			uint8_t i, shift;
 
-
 			i = buf[index]; // read yours
 			shift = map_buf_s[index];
-			__syncthreads();
+
+			// a syncthreads is not needed here because a warp is 32 threads and we are operating on 16 bytes of data
+			// 
+			//__syncthreads();
 			// write yours to new row position
 			buf[shift] = i;
 		}
 
 		// shift row operation
-		__device__ void aes_shiftRows_inv_byte(int index, uint8_t* buf,uint8_t* map_buf_s)
+		__device__ void aes_shiftRows_inv_byte(uint32_t index, uint8_t* buf,uint8_t* map_buf_s)
 		{
 			uint8_t i, shift;
-			// make this 32 OR just subtract 16 from tid
-			// even row 0 will read but will just right back to same place
-			// maybe less optimal but simpler code
 			i = buf[index]; // read yours
 			shift = map_buf_s[index];
-			__syncthreads();
+			//__syncthreads();
 			// write yours to new row position
 			buf[shift] = i;
 		}
 
 		// mix column operation
-		__device__ void aes_mixColumns_byte(int index, uint8_t *buf) {
-			register uint8_t i, a, b, c, d, e;
+		__device__ void aes_mixColumns_byte(uint32_t index, uint8_t *buf) 
+		{
+			uint8_t i, a, b, c, d, e;
 			//for (i = 0; i < 16; i += 4) {
 			if (index == 0 || ((index % 4) == 0))
 			{ // only one thread per column is necessary
@@ -177,8 +168,8 @@ namespace aes {
 
 
 		// inv mix column operation
-		__device__ void aes_mixColumns_inv_byte(int index, uint8_t *buf) {
-			register uint8_t i, a, b, c, d, e, x, y, z;
+		__device__ void aes_mixColumns_inv_byte(uint32_t index, uint8_t *buf) {
+			uint8_t i, a, b, c, d, e, x, y, z;
 			if (index == 0 || ((index % 4) == 0))
 			{
 				a = buf[index];
@@ -197,55 +188,58 @@ namespace aes {
 		}
 
 		// aes encrypt algorithm one thread/one block with AES_BLOCK_SIZE 
-		__global__ void kern_aes_encrypt_ecb_byte(uint8_t *buf_d, uint8_t *key_d,uint8_t* row_map, int numbytes, int rounds, int key_length) {
-			uint8_t i;
-
-			int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+		__global__ void kern_aes_encrypt_ecb_byte(uint8_t *buf_d, uint8_t *key_d,uint8_t* row_map, uint32_t numbytes, uint8_t rounds, uint8_t key_length) {
+			uint32_t index = (blockIdx.x * blockDim.x) + threadIdx.x;
 			if (index >= numbytes) { return; }
 
-			__shared__ uint8_t e_key[240];
+			__shared__ uint8_t e_key[MAX_EKEY_LENGTH];
 			__shared__ uint8_t buf_t[blockSize1d]; // thread buffer
-			__shared__ uint8_t row_map_s[blockSize1d];
+			__shared__ uint64_t row_map_s[blockSize1d/sizeof(uint64_t)];
 
-			int copy_bytes = 0;
-
+			uint8_t copy_bytes = 0;
+			uint8_t aes_index = index % AES_BLOCK_SIZE;
+			uint8_t block_index = index % blockSize1d;
+			
 			// someones gotta copy
-			if ((index % blockSize1d) == 0)
+			if (block_index == 0)
 			{
 				// since shared mem is per block we copy in what well need
 				copy_bytes = (numbytes < index + 128) ? (numbytes - index) : blockSize1d;
 				memcpy(buf_t, &buf_d[index], copy_bytes);
 				memcpy(e_key, &key_d[0], key_length);
 				memcpy(row_map_s, row_map, blockSize1d);
+//#pragma unroll
+				//for (uint8_t b = 0; b < blockSize1d; b += sizeof(uint64_t)) {
+				//	uint64_t *val = (uint64_t*)row_map[b * sizeof(uint64_t)];
+				//	row_map_s[b] = *val;
+				//}
 			}
-			
-			int aes_index = index % AES_BLOCK_SIZE;
-			int block_index = index % blockSize1d;
+		
 			__syncthreads();
 
 			aes_addRoundKey_byte(aes_index, block_index, buf_t, &e_key[0]);
 
-			__syncthreads();
-			for (i = 1; i < rounds; ++i)
+			//__syncthreads();
+			for (uint8_t i = 1; i < rounds; ++i)
 			{
 				aes_subBytes_byte(block_index, buf_t);
-				__syncthreads();
-				aes_shiftRows_byte(block_index, buf_t, row_map_s);
-				__syncthreads();
+				//__syncthreads();
+				aes_shiftRows_byte(block_index, buf_t, (uint8_t*)row_map_s);
+				//__syncthreads();
 				aes_mixColumns_byte(block_index, buf_t);
-				__syncthreads();
+				//__syncthreads();
 				aes_addRoundKey_byte(aes_index, block_index, buf_t, &e_key[i * AES_BLOCK_SIZE]);
-				__syncthreads();
+				//__syncthreads();
 			}
 			aes_subBytes_byte(block_index, buf_t);
-			__syncthreads();
-			aes_shiftRows_byte(block_index, buf_t,row_map_s);
-			__syncthreads();
+			//__syncthreads();
+			aes_shiftRows_byte(block_index, buf_t, (uint8_t*)row_map_s);
+			//__syncthreads();
 			aes_addRoundKey_byte(aes_index, block_index, buf_t, &e_key[key_length-AES_BLOCK_SIZE]);
 			__syncthreads();
 
 			/* someone has to write it back */
-			if ((index % blockSize1d) == 0)
+			if (block_index == 0)
 			{
 				memcpy(&buf_d[index], buf_t, copy_bytes);
 			}
@@ -254,21 +248,22 @@ namespace aes {
 
 
 		// aes decrypt algorithm
-		__global__ void kern_aes_decrypt_ecb_byte(uint8_t *buf_d, uint8_t *key_d, uint8_t* row_map, int numbytes, int rounds, int key_length) {
-			uint8_t i;
-			int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+		__global__ void kern_aes_decrypt_ecb_byte(uint8_t *buf_d, uint8_t *key_d, uint8_t* row_map, uint32_t numbytes, uint8_t rounds, uint8_t key_length) {
+
+			uint32_t index = (blockIdx.x * blockDim.x) + threadIdx.x;
 			if (index >= numbytes) { return; }
-			int copy_bytes = 0;
-			int aes_index = index % AES_BLOCK_SIZE;
-			int block_index = index % blockSize1d;
+			
+			uint8_t copy_bytes = 0;
+			uint8_t aes_index = index % AES_BLOCK_SIZE;
+			uint8_t block_index = index % blockSize1d;
 			// TODO this needs to be per blocksize and EKEY should maybe just be set
 			// to highest
-			__shared__ uint8_t e_key[240];
+			__shared__ uint8_t e_key[MAX_EKEY_LENGTH];
 			__shared__ uint8_t buf_t[blockSize1d]; // thread buffer
 			__shared__ uint8_t row_map_s[blockSize1d];
 
 			// someones gotta copy
-			if ((index % blockSize1d) == 0)
+			if (block_index == 0)
 			{
 				// since shared mem is per block we copy in what well need
 				copy_bytes = (numbytes < index + 128) ? (numbytes - index) : blockSize1d;
@@ -279,30 +274,30 @@ namespace aes {
 			__syncthreads();
 
 			aes_addRoundKey_byte(aes_index, block_index,buf_t, &e_key[key_length-AES_BLOCK_SIZE]);
-		//	__syncthreads();
-			for (int round = (rounds - 1); round > 0; --round)
+			//__syncthreads();
+			for (uint8_t round = (rounds - 1); round > 0; --round)
 			{
 				aes_shiftRows_inv_byte(block_index,buf_t, row_map_s);
-			//	__syncthreads();
+				//__syncthreads();
 
 				aes_subBytes_inv_byte(block_index, buf_t);
-			//	__syncthreads();
+				//__syncthreads();
 
 				aes_addRoundKey_byte(aes_index, block_index,buf_t, &e_key[round * AES_BLOCK_SIZE]);
-			//	__syncthreads();
+				//__syncthreads();
 
 				aes_mixColumns_inv_byte(block_index, buf_t);
-			//	__syncthreads();
+				//__syncthreads();
 			}
 
 			aes_shiftRows_inv_byte(block_index, buf_t, row_map_s);
-		//	__syncthreads();
+			//__syncthreads();
 			aes_subBytes_inv_byte(block_index, buf_t);
-		//	__syncthreads();
+			//__syncthreads();
 			aes_addRoundKey_byte(aes_index, block_index,buf_t, &e_key[0]);
-		//	__syncthreads();
+			__syncthreads();
 			/* someone has to write it back */
-			if ((index % blockSize1d) == 0)
+			if (block_index == 0)
 			{
 				memcpy(&buf_d[index], buf_t, copy_bytes);
 			}
@@ -324,11 +319,11 @@ namespace aes {
 
 			// get our space
 			cudaMalloc((void**)&buf_d, sizeof(uint8_t) * aes->padded_length);
-			cudaMalloc((void**)&key_d, sizeof(uint8_t) * MAX_KEY_EXPAND);
+			cudaMalloc((void**)&key_d, sizeof(uint8_t) * aes->expand_length);
 			cudaMalloc((void**)&row_map_d, sizeof(uint8_t) * blockSize1d);
 			checkCUDAError("cudaMalloc");
 			// copy data to device
-			cudaMemcpy(key_d, aes->key_expand, sizeof(uint8_t) * MAX_KEY_EXPAND, cudaMemcpyHostToDevice);
+			cudaMemcpy(key_d, aes->key_expand, sizeof(uint8_t) * aes->expand_length, cudaMemcpyHostToDevice);
 			cudaMemcpy(buf_d, aes->data,sizeof(uint8_t) * aes->padded_length, cudaMemcpyHostToDevice);
 			cudaMemcpyToSymbol(sbox, sbox, sizeof(uint8_t) * 256);
 			checkCUDAError("cudacopy");
@@ -368,20 +363,20 @@ namespace aes {
 			uint8_t* key_d;
 			uint8_t* row_map_d;
 			// each thread gets one byte!
-			const int active_threads = aes->padded_length;
+			const uint32_t active_threads = aes->padded_length;
 			dim3 dimBlock = (active_threads + blockSize1d - 1) / blockSize1d;
-			int map_copies = blockSize1d / AES_BLOCK_SIZE;
+			uint32_t map_copies = blockSize1d / AES_BLOCK_SIZE;
 			static uint8_t map[16] = { 0,5,10,15,4,9,14,3,8,13,2,7,12,1,6,11 };
 
 			printf("\nBeginning byte level parralelization encryption...\n");
 
 			// get our space
 			cudaMalloc((void**)&buf_d, sizeof(uint8_t) * aes->padded_length);
-			cudaMalloc((void**)&key_d, sizeof(uint8_t) * MAX_KEY_EXPAND);
+			cudaMalloc((void**)&key_d, sizeof(uint8_t) * aes->expand_length);
 			cudaMalloc((void**)&row_map_d, sizeof(uint8_t) * blockSize1d);
 			checkCUDAError("cudaMalloc");
 			// copy data to device
-			cudaMemcpy(key_d, aes->key_expand, sizeof(uint8_t) * MAX_KEY_EXPAND, cudaMemcpyHostToDevice);
+			cudaMemcpy(key_d, aes->key_expand, sizeof(uint8_t) * aes->expand_length, cudaMemcpyHostToDevice);
 			cudaMemcpy(buf_d, aes->data, sizeof(uint8_t) * aes->padded_length, cudaMemcpyHostToDevice);
 			// consider moving this to shared memory as well
 			// TODO 
@@ -389,10 +384,10 @@ namespace aes {
 			checkCUDAError("cudacopy");
 
 			// I know what you are thinking .... wtf is this eric and I would tend to agree with you
-			for (int i = 0; i < map_copies; i++)
+			for (uint32_t i = 0; i < map_copies; i++)
 			{
 				cudaMemcpy(&row_map_d[i*AES_BLOCK_SIZE], map, sizeof(uint8_t) * AES_BLOCK_SIZE, cudaMemcpyHostToDevice);
-				for (int j = 0; j < AES_BLOCK_SIZE; j++) map[j] += 16;
+				for (uint8_t j = 0; j < AES_BLOCK_SIZE; j++) map[j] += 16;
 			}
 			//start timer
 			timer().startGpuTimer();
@@ -400,6 +395,7 @@ namespace aes {
 			// decryption kernel
 			kern_aes_decrypt_ecb_byte << <dimBlock, blockSize1d >> > (buf_d, key_d, row_map_d, aes->padded_length, aes->rounds, aes->expand_length);
 			checkCUDAError("cudakern");
+			
 			//end timer
 			timer().endGpuTimer();
 

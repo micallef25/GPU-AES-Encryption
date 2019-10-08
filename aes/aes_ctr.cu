@@ -9,14 +9,7 @@
 #include <iomanip>
 #include <fstream>
 #include <string>
-
-
-#define AES_BLOCK_SIZE 16
-#define THREADS_PER_BLOCK 512
-
-
-#define F(x)   (((x)<<1) ^ ((((x)>>7) & 1) * 0x1b))
-#define FD(x)  (((x) >> 1) ^ (((x) & 1) ? 0x8d : 0))
+#include <aes/aes_ecb_block.h>
 
 
 namespace aes {
@@ -100,125 +93,8 @@ namespace aes {
 			0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d
 		};
 
-
-		// x-time operation
-		__device__ uint8_t rj_xtime(uint8_t x) {
-			return ((x << 1) ^ (((x >> 7) & 1) * 0x1b));
-		}
-
-		// subbyte operation
-		__device__ void aes_subBytes(uint8_t *buf) {
-			register uint8_t i, b;
-			for (i = 0; i < 16; ++i) {
-				b = buf[i];
-				buf[i] = sbox[b];
-			}
-		}
-
-
-		// inv subbyte operation
-		__device__ void aes_subBytes_inv(uint8_t *buf) {
-			register uint8_t i, b;
-			for (i = 0; i < 16; ++i) {
-				b = buf[i];
-				buf[i] = sboxinv[b];
-			}
-		}
-
-
-		// add round key operation
-		__device__ void aes_addRoundKey(uint8_t *buf, uint8_t *key) {
-			register uint8_t i = 16;
-			while (i--) {
-				buf[i] ^= key[i];
-			}
-		}
-
-
-		// shift row operation
-		__device__ void aes_shiftRows(uint8_t *buf) {
-			register uint8_t i, j;
-			i = buf[1];
-			buf[1] = buf[5];
-			buf[5] = buf[9];
-			buf[9] = buf[13];
-			buf[13] = i;
-			i = buf[10];
-			buf[10] = buf[2];
-			buf[2] = i;
-			j = buf[3];
-			buf[3] = buf[15];
-			buf[15] = buf[11];
-			buf[11] = buf[7];
-			buf[7] = j;
-			j = buf[14];
-			buf[14] = buf[6];
-			buf[6] = j;
-		}
-
-		// inv shift row operation
-		__device__ void aes_shiftRows_inv(uint8_t *buf)
-		{
-			register uint8_t i, j;
-			i = buf[1];
-			buf[1] = buf[13];
-			buf[13] = buf[9];
-			buf[9] = buf[5];
-			buf[5] = i;
-			i = buf[2];
-			buf[2] = buf[10];
-			buf[10] = i;
-			j = buf[3];
-			buf[3] = buf[7];
-			buf[7] = buf[11];
-			buf[11] = buf[15];
-			buf[15] = j;
-			j = buf[6];
-			buf[6] = buf[14];
-			buf[14] = j;
-		}
-
-		// mix column operation
-		__device__ void aes_mixColumns(uint8_t *buf) {
-			register uint8_t i, a, b, c, d, e;
-			for (i = 0; i < 16; i += 4)
-			{
-				a = buf[i];
-				b = buf[i + 1];
-				c = buf[i + 2];
-				d = buf[i + 3];
-				e = a ^ b ^ c ^ d;
-				buf[i] ^= e ^ rj_xtime(a^b);
-				buf[i + 1] ^= e ^ rj_xtime(b^c);
-				buf[i + 2] ^= e ^ rj_xtime(c^d);
-				buf[i + 3] ^= e ^ rj_xtime(d^a);
-			}
-		}
-
-
-		// inv mix column operation
-		__device__ void aes_mixColumns_inv(uint8_t *buf) {
-			register uint8_t i, a, b, c, d, e, x, y, z;
-			for (i = 0; i < 16; i += 4)
-			{
-				a = buf[i];
-				b = buf[i + 1];
-				c = buf[i + 2];
-				d = buf[i + 3];
-				e = a ^ b ^ c ^ d;
-				z = rj_xtime(e);
-				x = e ^ rj_xtime(rj_xtime(z^a^c));
-				y = e ^ rj_xtime(rj_xtime(z^b^d));
-				buf[i] ^= x ^ rj_xtime(a^b);
-				buf[i + 1] ^= y ^ rj_xtime(b^c);
-				buf[i + 2] ^= x ^ rj_xtime(c^d);
-				buf[i + 3] ^= y ^ rj_xtime(d^a);
-			}
-		}
-
 		// aes encrypt algorithm one thread/one block with AES_BLOCK_SIZE 
 		__global__ void kern_aes_encrypt_ctr(uint8_t *buf_d, uint8_t *key_d, IV* iv_d, int numbytes, int rounds) {
-			uint8_t i, rcon;
 			uint8_t ivbuf[AES_BLOCK_SIZE]; // thread buffer
 			uint8_t databuf[AES_BLOCK_SIZE]; // thread buffer
 
@@ -237,22 +113,22 @@ namespace aes {
 			memcpy(ivbuf, iv_d, AES_BLOCK_SIZE);
 			memcpy(databuf, &buf_d[buff_offset], AES_BLOCK_SIZE);
 			
-			aes_addRoundKey(ivbuf, &key_d[0]);
+			aes::block_level::aes_addRoundKey(ivbuf, &key_d[0]);
 
-			for (i = 1; i < rounds; ++i)
+			for (uint8_t i = 1; i < rounds; ++i)
 			{
-				aes_subBytes(ivbuf);
-				aes_shiftRows(ivbuf);
-				aes_mixColumns(ivbuf);
-				aes_addRoundKey(ivbuf, &key_d[i * AES_BLOCK_SIZE]);
+				aes::block_level::aes_subBytes(ivbuf);
+				aes::block_level::aes_shiftRows(ivbuf);
+				aes::block_level::aes_mixColumns(ivbuf);
+				aes::block_level::aes_addRoundKey(ivbuf, &key_d[i * AES_BLOCK_SIZE]);
 			}
-			aes_subBytes(ivbuf);
-			aes_shiftRows(ivbuf);
-			aes_addRoundKey(ivbuf, &key_d[160]);
+			aes::block_level::aes_subBytes(ivbuf);
+			aes::block_level::aes_shiftRows(ivbuf);
+			aes::block_level::aes_addRoundKey(ivbuf, &key_d[160]);
 
-#pragma unroll // todo make a perforamnce analysis on this. could be cool. just macro it 
+//#pragma unroll // todo make a perforamnce analysis on this. could be cool. just macro it 
 			// todo typecast this
-			for (i = 0; i < AES_BLOCK_SIZE; i++)
+			for (uint8_t i = 0; i < AES_BLOCK_SIZE; i++)
 			{
 				databuf[i] ^= ivbuf[i];
 			}
@@ -268,10 +144,9 @@ namespace aes {
 			uint8_t* buf_d;
 			uint8_t* key_d;
 			IV* iv_d;
-			const int blockSize1d = 128;
+
 			const int active_threads = aes->padded_length / AES_BLOCK_SIZE;
 			dim3 dimBlock = (active_threads + blockSize1d - 1) / blockSize1d;
-
 
 			printf("\nBeginning byte level parralelization encryption...\n");
 
@@ -293,7 +168,7 @@ namespace aes {
 
 			// decryption kernel
 			kern_aes_encrypt_ctr << <dimBlock, blockSize1d >> > (buf_d, key_d,iv_d,aes->padded_length, aes->rounds);
-			checkCUDAError("kernel");
+			//checkCUDAError("kernel");
 			//end timer
 			timer().endGpuTimer();
 
@@ -315,7 +190,7 @@ namespace aes {
 			uint8_t* buf_d;
 			uint8_t* key_d;
 			IV* iv_d;
-			const int blockSize1d = 128;
+
 			const int active_threads = aes->padded_length / AES_BLOCK_SIZE;
 			dim3 dimBlock = (active_threads + blockSize1d - 1) / blockSize1d;
 
