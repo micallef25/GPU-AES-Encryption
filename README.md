@@ -41,17 +41,17 @@ Lorem ipsum... (the added text)
 
 ##Understanding AES encryption/decryption
 
-https://tools.ietf.org/html/rfc3686#section-2.1
-https://www.comparitech.com/blog/information-security/what-is-aes-encryption/
-https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Counter_(CTR)
-https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch36.html
-https://engineering.purdue.edu/kak/compsec/NewLectures/Lecture8.pdf
+* https://tools.ietf.org/html/rfc3686#section-2.1
+* https://www.comparitech.com/blog/information-security/what-is-aes-encryption/
+* https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Counter_(CTR)
+* https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch36.html
+* https://engineering.purdue.edu/kak/compsec/NewLectures/Lecture8.pdf
 
 ##Text Generation
 
-http://loremfuckingipsum.com/text.php
+* http://loremfuckingipsum.com/text.php
 
 ## Libraries
 
-https://github.com/kokke/tiny-AES-c
-https://github.com/jarro2783/cxxopts
+* https://github.com/kokke/tiny-AES-c
+* https://github.com/jarro2783/cxxopts
