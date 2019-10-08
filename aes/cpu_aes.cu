@@ -41,6 +41,28 @@ namespace aes {
 			timer().endCpuTimer();
 		}
 
+		// call library functions for baseline time
+// TODO change types
+		void aes::CPU::cpu_encrypt_ctr(AES_ctx* ctx, uint8_t* buffer, int padded_length)
+		{
+			timer().startCpuTimer();
+
+			// ctr encrypt and decrpyt are ampedextrious.
+			AES_CTR_xcrypt_buffer(ctx, buffer,padded_length);
+
+			timer().endCpuTimer();
+
+		}
+		void aes::CPU::cpu_decrypt_ctr(AES_ctx* ctx, uint8_t* buffer, int padded_length)
+		{
+			timer().startCpuTimer();
+
+			// ctr encrypt and decrpyt are ampedextrious.
+			AES_CTR_xcrypt_buffer(ctx, buffer, padded_length);
+
+			timer().endCpuTimer();
+		}
+
 
 	}
 }

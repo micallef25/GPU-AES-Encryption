@@ -220,27 +220,28 @@ namespace aes {
 			}
 			
 			int aes_index = index % AES_BLOCK_SIZE;
+			int block_index = index % blockSize1d;
 			__syncthreads();
 
-			aes_addRoundKey_byte(aes_index, index, buf_t, &e_key[0]);
+			aes_addRoundKey_byte(aes_index, block_index, buf_t, &e_key[0]);
 
 			__syncthreads();
 			for (i = 1; i < rounds; ++i)
 			{
-				aes_subBytes_byte(index, buf_t);
+				aes_subBytes_byte(block_index, buf_t);
 				__syncthreads();
-				aes_shiftRows_byte(index, buf_t, row_map_s);
+				aes_shiftRows_byte(block_index, buf_t, row_map_s);
 				__syncthreads();
-				aes_mixColumns_byte(index, buf_t);
+				aes_mixColumns_byte(block_index, buf_t);
 				__syncthreads();
-				aes_addRoundKey_byte(aes_index,index, buf_t, &e_key[i * AES_BLOCK_SIZE]);
+				aes_addRoundKey_byte(aes_index, block_index, buf_t, &e_key[i * AES_BLOCK_SIZE]);
 				__syncthreads();
 			}
-			aes_subBytes_byte(index, buf_t);
+			aes_subBytes_byte(block_index, buf_t);
 			__syncthreads();
-			aes_shiftRows_byte(index, buf_t,row_map_s);
+			aes_shiftRows_byte(block_index, buf_t,row_map_s);
 			__syncthreads();
-			aes_addRoundKey_byte(aes_index,index, buf_t, &e_key[key_length-AES_BLOCK_SIZE]);
+			aes_addRoundKey_byte(aes_index, block_index, buf_t, &e_key[key_length-AES_BLOCK_SIZE]);
 			__syncthreads();
 
 			/* someone has to write it back */
@@ -258,8 +259,8 @@ namespace aes {
 			int index = (blockIdx.x * blockDim.x) + threadIdx.x;
 			if (index >= numbytes) { return; }
 			int copy_bytes = 0;
-			int aes_index = index % 16;
-
+			int aes_index = index % AES_BLOCK_SIZE;
+			int block_index = index % blockSize1d;
 			// TODO this needs to be per blocksize and EKEY should maybe just be set
 			// to highest
 			__shared__ uint8_t e_key[240];
@@ -277,35 +278,34 @@ namespace aes {
 			}
 			__syncthreads();
 
-			aes_addRoundKey_byte(aes_index,index,buf_t, &e_key[key_length-AES_BLOCK_SIZE]);
-			__syncthreads();
+			aes_addRoundKey_byte(aes_index, block_index,buf_t, &e_key[key_length-AES_BLOCK_SIZE]);
+		//	__syncthreads();
 			for (int round = (rounds - 1); round > 0; --round)
 			{
-				aes_shiftRows_inv_byte(index,buf_t, row_map_s);
-				__syncthreads();
+				aes_shiftRows_inv_byte(block_index,buf_t, row_map_s);
+			//	__syncthreads();
 
-				aes_subBytes_inv_byte(index, buf_t);
-				__syncthreads();
+				aes_subBytes_inv_byte(block_index, buf_t);
+			//	__syncthreads();
 
-				aes_addRoundKey_byte(aes_index,index,buf_t, &e_key[round * AES_BLOCK_SIZE]);
-				__syncthreads();
+				aes_addRoundKey_byte(aes_index, block_index,buf_t, &e_key[round * AES_BLOCK_SIZE]);
+			//	__syncthreads();
 
-				aes_mixColumns_inv_byte(index, buf_t);
-				__syncthreads();
+				aes_mixColumns_inv_byte(block_index, buf_t);
+			//	__syncthreads();
 			}
 
-			aes_shiftRows_inv_byte(index, buf_t, row_map_s);
-			__syncthreads();
-			aes_subBytes_inv_byte(index, buf_t);
-			__syncthreads();
-			aes_addRoundKey_byte(aes_index,index,buf_t, &e_key[0]);
-
+			aes_shiftRows_inv_byte(block_index, buf_t, row_map_s);
+		//	__syncthreads();
+			aes_subBytes_inv_byte(block_index, buf_t);
+		//	__syncthreads();
+			aes_addRoundKey_byte(aes_index, block_index,buf_t, &e_key[0]);
+		//	__syncthreads();
 			/* someone has to write it back */
 			if ((index % blockSize1d) == 0)
 			{
 				memcpy(&buf_d[index], buf_t, copy_bytes);
 			}
-			__syncthreads();
 		}
 
 		// byte level parallelization. Every thread gets one byte into the 128 bit block
@@ -337,7 +337,7 @@ namespace aes {
 			for (int i = 0; i < map_copies; i++)
 			{
 				cudaMemcpy(&row_map_d[i*AES_BLOCK_SIZE], map, sizeof(uint8_t) * AES_BLOCK_SIZE, cudaMemcpyHostToDevice);
-				for (int i = 0; i < AES_BLOCK_SIZE; i++) map[i] += 16;
+				for (int j = 0; j < AES_BLOCK_SIZE; j++) map[j] += 16;
 			}
 
 			//start timer
@@ -392,9 +392,8 @@ namespace aes {
 			for (int i = 0; i < map_copies; i++)
 			{
 				cudaMemcpy(&row_map_d[i*AES_BLOCK_SIZE], map, sizeof(uint8_t) * AES_BLOCK_SIZE, cudaMemcpyHostToDevice);
-				for (int i = 0; i < AES_BLOCK_SIZE; i++) map[i] += 16;
+				for (int j = 0; j < AES_BLOCK_SIZE; j++) map[j] += 16;
 			}
-
 			//start timer
 			timer().startGpuTimer();
 
