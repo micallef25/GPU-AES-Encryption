@@ -47,12 +47,12 @@ Lorem ipsum...
 ## Block Level
 Lorem ipsum...
 
-![](img/blocklevel.PNG)
+![](img/blocklevel.png)
 
 ## Byte Level
 Lorem ipsum... (the added text)
 
-![](img/bytelevel.PNG)
+![](img/bytelevel.png)
 
 # Resources
 
