@@ -1,4 +1,4 @@
-CUDA Character Recognition
+CUDA AES encryption
 ======================
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 2**
@@ -7,6 +7,15 @@ CUDA Character Recognition
   * https://www.linkedin.com/in/eric-micallef-99291714b/
   
 * Tested on: Windows 10, i5, Nvidia GTX 1660 (Personal)
+
+
+- [Heading 1](#heading-1)
+  - [Heading 2](#heading-2)
+  - [Heading 3](#heading-3)
+
+### Overview
+
+#### AES
 
 ### Analysis
 
@@ -18,4 +27,11 @@ computing table into shared memory for fast table look ups rather than memory re
 
 16 threads per 128 bits writing to shared memory buffers
 
-p
+# Heading 1
+Lorem ipsum...
+
+## Heading 2
+Lorem ipsum...
+
+## Heading 3
+Lorem ipsum... (the added text)
