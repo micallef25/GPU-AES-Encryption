@@ -60,12 +60,12 @@ typedef struct aes_info
 	uint8_t* data; // data to decrypt/encrypt
 	uint8_t* keys;
 	uint8_t* key_expand;
-	int rounds; // how many rounds to generate encryption/decryption
-	int words; // hoe many words in a key
-	int type; // 128,196 or 256?
-	int file_length; // excludes padding
-	int padded_length;
-	int expand_length;
+	uint8_t rounds; // how many rounds to generate encryption/decryption
+	uint32_t words; // hoe many words in a key
+	uint32_t type; // 128,196 or 256?
+	uint32_t file_length; // excludes padding
+	uint32_t padded_length;
+	uint32_t expand_length;
 	IV* ctr_iv;
 }aes_info;
 
@@ -76,6 +76,7 @@ namespace aes {
 		aes_info* create_aes_struct(std::string File, int type);
 		void destroy_aes_struct(aes_info* aes);
 		void KeyExpansion(uint8_t* RoundKey, const uint8_t* Key, int type);
+		void write_to_file(uint8_t* data, uint32_t length);
 		/**
 		* This class is used for timing the performance
 		* Uncopyable and unmovable

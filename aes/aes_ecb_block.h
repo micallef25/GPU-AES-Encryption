@@ -11,8 +11,8 @@ namespace aes {
 		int aes_decrypt_block(aes_info* aes);
 
 		
-		__device__ void aes_subBytes(uint8_t *buf);
-		__device__ void aes_subBytes_inv(uint8_t *buf);
+		__device__ void aes_subBytes(uint8_t *buf,uint8_t* s_sbox);
+		__device__ void aes_subBytes_inv(uint8_t *buf, uint8_t* s_sbox);
 		
 		__device__ void aes_mixColumns_inv(uint8_t *buf);
 		__device__ void aes_mixColumns(uint8_t *buf);

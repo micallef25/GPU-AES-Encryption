@@ -8,7 +8,7 @@ CUDA AES encryption
   
 * Tested on: Windows 10, i5, Nvidia GTX 1660 (Personal)
 
-
+- [Repo Contents](#Repo-Contents)
 - [AES Overview](#AES-Overview)
   - [ECB Mode](#ECB-Mode)
   - [CTR Mode](#CTR-Mode)
@@ -19,14 +19,27 @@ CUDA AES encryption
 
 - [Resources](#Resources)
 
+# Repo Contents
+This repo contains code that benchmarks the well known cryptography AES algorithms.
+We run ECB and CTR modes on both the CPU and GPU to see the benefits that can be obtained with highly parallel algorithms on highly parallel hardware.
+
+The CPU benchmark is written in C, The GPU benchmark is written in CUDA.
+
+The GPU has two different methods for encrypting and decrypting. One can encrypt and decypt at the granularity of a byte or a block. Performance and details are discussed below.
+
 # AES Overview
-Lorem ipsum...
+
+AES is a highly popular cryptography algorithm. This algorithm allows the user to encrpyt and decrypt files using a key. There are modes ECB, CBC, OFB, CFB, CTR each offering a different way of encrypting and decrypting files. 
 
 ## ECB Mode
 Lorem ipsum...
 
+![](img/ecb.PNG)
+
 ## CTR Mode
 Lorem ipsum... (the added text)
+
+![](img/ctr.PNG)
 
 # Performance Analysis
 Lorem ipsum...
@@ -34,8 +47,12 @@ Lorem ipsum...
 ## Block Level
 Lorem ipsum...
 
+![](img/blocklevel.PNG)
+
 ## Byte Level
 Lorem ipsum... (the added text)
+
+![](img/bytelevel.PNG)
 
 # Resources
 

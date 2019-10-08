@@ -117,16 +117,16 @@ namespace aes {
 
 			for (uint8_t i = 1; i < rounds; ++i)
 			{
-				aes::block_level::aes_subBytes(ivbuf);
+//				aes::block_level::aes_subBytes(ivbuf);
 				aes::block_level::aes_shiftRows(ivbuf);
 				aes::block_level::aes_mixColumns(ivbuf);
 				aes::block_level::aes_addRoundKey(ivbuf, &key_d[i * AES_BLOCK_SIZE]);
 			}
-			aes::block_level::aes_subBytes(ivbuf);
+		//	aes::block_level::aes_subBytes(ivbuf);
 			aes::block_level::aes_shiftRows(ivbuf);
 			aes::block_level::aes_addRoundKey(ivbuf, &key_d[160]);
 
-//#pragma unroll // todo make a perforamnce analysis on this. could be cool. just macro it 
+#pragma unroll // todo make a perforamnce analysis on this. could be cool. just macro it 
 			// todo typecast this
 			for (uint8_t i = 0; i < AES_BLOCK_SIZE; i++)
 			{
@@ -148,7 +148,7 @@ namespace aes {
 			const int active_threads = aes->padded_length / AES_BLOCK_SIZE;
 			dim3 dimBlock = (active_threads + blockSize1d - 1) / blockSize1d;
 
-			printf("\nBeginning byte level parralelization encryption...\n");
+			//printf("\nBeginning byte level parralelization encryption...\n");
 
 			// get our space
 			cudaMalloc((void**)&buf_d, sizeof(uint8_t) * aes->padded_length);
@@ -168,7 +168,8 @@ namespace aes {
 
 			// decryption kernel
 			kern_aes_encrypt_ctr << <dimBlock, blockSize1d >> > (buf_d, key_d,iv_d,aes->padded_length, aes->rounds);
-			//checkCUDAError("kernel");
+			checkCUDAError("kernel");
+			
 			//end timer
 			timer().endGpuTimer();
 
@@ -194,7 +195,7 @@ namespace aes {
 			const int active_threads = aes->padded_length / AES_BLOCK_SIZE;
 			dim3 dimBlock = (active_threads + blockSize1d - 1) / blockSize1d;
 
-			printf("\nBeginning byte level parralelization encryption...\n");
+			//printf("\nBeginning byte level parralelization encryption...\n");
 
 			// get our space
 			cudaMalloc((void**)&buf_d, sizeof(uint8_t) * aes->padded_length);
