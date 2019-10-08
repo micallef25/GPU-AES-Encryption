@@ -13,9 +13,9 @@ CUDA AES encryption
   - [ECB Mode](#ECB-Mode)
   - [CTR Mode](#CTR-Mode)
 
-- [Performance Analysis](#Performance Analysis)
-  - [Block Level](#Block Level)
-  - [Byte Level](#Byte Level)
+- [Performance Analysis](#Performance-Analysis)
+  - [Block Level](#Block-Level)
+  - [Byte Level](#Byte-Level)
 
 # AES Overview
 Lorem ipsum...
