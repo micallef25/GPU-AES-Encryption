@@ -23,7 +23,7 @@ namespace aes {
 		}
 
 		// S table
-		__constant__ static const uint8_t sbox[256] = {
+		static const uint8_t sbox[256] = {
 			0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5,
 			0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
 			0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0,
@@ -59,7 +59,7 @@ namespace aes {
 		};
 
 		// inv S table
-		__constant__ static const uint8_t sboxinv[256] = {
+		static const uint8_t sboxinv[256] = {
 			0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38,
 			0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb,
 			0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87,
@@ -102,21 +102,21 @@ namespace aes {
 
 
 		// subbyte operation
-		__device__ void aes_subBytes(uint8_t *buf) {
+		__device__ void aes_subBytes(uint8_t *buf,uint8_t* s_sbox) {
 			uint8_t i, b;
 			for (i = 0; i < 16; ++i) {
 				b = buf[i];
-				buf[i] = sbox[b];
+				buf[i] = s_sbox[b];
 			}
 		}
 
 
 		// inv subbyte operation
-		__device__ void aes_subBytes_inv(uint8_t *buf) {
+		__device__ void aes_subBytes_inv(uint8_t *buf, uint8_t* s_sbox) {
 			uint8_t i, b;
 			for (i = 0; i < 16; ++i) {
 				b = buf[i];
-				buf[i] = sboxinv[b];
+				buf[i] = s_sbox[b];
 			}
 		}
 
@@ -220,30 +220,39 @@ namespace aes {
 		}
 
 		// aes encrypt algorithm one thread/one block with AES_BLOCK_SIZE 
-		__global__ void kern_aes_encrypt_ecb(uint8_t *buf_d, uint8_t *key_d, uint32_t numbytes, uint8_t rounds,uint8_t key_length) {
+		__global__ void kern_aes_encrypt_ecb(uint8_t *buf_d, uint8_t *key_d,uint8_t* sbox_d, uint32_t numbytes, uint8_t rounds,uint8_t key_length) {
 			
 			uint8_t buf_t[AES_BLOCK_SIZE]; // stores the blocks data to operate on
 
-			__shared__ uint8_t e_key[240]; // stores the unique key
+			__shared__ uint8_t key_s[240]; // stores the unique key
+			__shared__ uint8_t s_sbox[256];
 
 			uint32_t offset = (blockIdx.x * blockDim.x) + threadIdx.x;
 			uint32_t buff_offset = offset * AES_BLOCK_SIZE;
 			if (buff_offset >= numbytes) { return; }
 
+			if ((offset % blockSize1d) == 0 ) 
+			{
+				memcpy(key_s, key_d, sizeof(uint8_t)*key_length);
+				memcpy(s_sbox, sbox_d, sizeof(uint8_t) * 256);
+			}
+
 			memcpy(buf_t, &buf_d[buff_offset], AES_BLOCK_SIZE);
 
-			aes_addRoundKey(buf_t, &key_d[0]);
+			__syncthreads();
+
+			aes_addRoundKey(buf_t, &key_s[0]);
 
 			for (uint8_t i = 1; i < rounds; ++i)
 			{
-				aes_subBytes(buf_t);
+				aes_subBytes(buf_t,s_sbox);
 				aes_shiftRows(buf_t);
 				aes_mixColumns(buf_t);
-				aes_addRoundKey(buf_t, &key_d[i * AES_BLOCK_SIZE]);
+				aes_addRoundKey(buf_t, &key_s[i * AES_BLOCK_SIZE]);
 			}
-			aes_subBytes(buf_t);
+			aes_subBytes(buf_t,s_sbox);
 			aes_shiftRows(buf_t);
-			aes_addRoundKey(buf_t, &key_d[key_length- AES_BLOCK_SIZE]);
+			aes_addRoundKey(buf_t, &key_s[key_length- AES_BLOCK_SIZE]);
 
 			/* copy thread buffer back into global memory */
 			memcpy(&buf_d[buff_offset], buf_t, AES_BLOCK_SIZE);
@@ -251,30 +260,41 @@ namespace aes {
 		}
 
 		// aes decrypt algorithm
-		__global__ void kern_aes_decrypt_ecb(uint8_t *buf_d, uint8_t *key_d, uint32_t numbytes, uint8_t rounds, uint8_t key_length) {
+		__global__ void kern_aes_decrypt_ecb(uint8_t *buf_d, uint8_t *key_d, uint8_t* sbox_d, uint32_t numbytes, uint8_t rounds, uint8_t key_length) {
 			
-			uint8_t buf_t[AES_BLOCK_SIZE];
-			
+			uint8_t buf_t[AES_BLOCK_SIZE]; // stores the blocks data to operate on
+
+			__shared__ uint8_t key_s[240]; // stores the unique key
+			__shared__ uint8_t s_sbox[256];
+
 			uint32_t offset = (blockIdx.x * blockDim.x) + threadIdx.x;
 			uint32_t buff_offset = offset * AES_BLOCK_SIZE;
 			if (buff_offset >= numbytes) { return; }
 
-			// copy to thread stack or registers
-			// TODO write own memcpy typecasting to 32bits I think itll be faster
+			if ((offset % blockSize1d) == 0)
+			{
+				memcpy(key_s, key_d, sizeof(uint8_t)*key_length);
+				memcpy(s_sbox, sbox_d, sizeof(uint8_t) * 256);
+			}
+
 			memcpy(buf_t, &buf_d[buff_offset], AES_BLOCK_SIZE);
-			aes_addRoundKey(buf_t, &key_d[key_length-AES_BLOCK_SIZE]);
+
+			__syncthreads();
+
+
+			aes_addRoundKey(buf_t, &key_s[key_length-AES_BLOCK_SIZE]);
 
 			for (int round = (rounds - 1); round > 0; --round)
 			{
 				aes_shiftRows_inv(buf_t);
-				aes_subBytes_inv(buf_t);
-				aes_addRoundKey(buf_t, &key_d[round * AES_BLOCK_SIZE]);
+				aes_subBytes_inv(buf_t,s_sbox);
+				aes_addRoundKey(buf_t, &key_s[round * AES_BLOCK_SIZE]);
 				aes_mixColumns_inv(buf_t);
 			}
 
 			aes_shiftRows_inv(buf_t);
-			aes_subBytes_inv(buf_t);
-			aes_addRoundKey(buf_t, &key_d[0]);
+			aes_subBytes_inv(buf_t,s_sbox);
+			aes_addRoundKey(buf_t, &key_s[0]);
 
 			/* copy thread back into global memory */
 			memcpy(&buf_d[buff_offset], buf_t, AES_BLOCK_SIZE);
@@ -286,17 +306,19 @@ namespace aes {
 		{
 			uint8_t* buf_d;
 			uint8_t* key_d;
-
-			printf("\nBeginning block level parralelization encryption...\n");
+			uint8_t* sbox_d;
+			//printf("\nBeginning block level parralelization encryption...\n");
 
 			// get our space
 			cudaMalloc((void**)&buf_d, sizeof(uint8_t) * aes->padded_length);
 			cudaMalloc((void**)&key_d, sizeof(uint8_t) * aes->expand_length);
+			cudaMalloc((void**)&sbox_d, sizeof(uint8_t) * 256);
 			checkCUDAError("cudaMalloc");
+			
 			// copy data to device
 			cudaMemcpy(key_d, aes->key_expand, sizeof(uint8_t) * aes->expand_length, cudaMemcpyHostToDevice);
 			cudaMemcpy(buf_d, aes->data, sizeof(uint8_t) * aes->padded_length, cudaMemcpyHostToDevice);
-			cudaMemcpyToSymbol(sbox, sbox, sizeof(uint8_t) * 256);
+			cudaMemcpy(sbox_d, sbox, sizeof(uint8_t) * 256, cudaMemcpyHostToDevice);
 			checkCUDAError("cudaMalloc");
 
 			// calculate how many threads we need to have to have one thread per block
@@ -307,7 +329,7 @@ namespace aes {
 			timer().startGpuTimer();
 
 			// decryption kernel
-			kern_aes_encrypt_ecb << <dimBlock, blockSize1d >> > (buf_d, key_d, aes->padded_length, aes->rounds,aes->expand_length );
+			kern_aes_encrypt_ecb << <dimBlock, blockSize1d >> > (buf_d, key_d,sbox_d, aes->padded_length, aes->rounds,aes->expand_length );
 
 			//end timer
 			timer().endGpuTimer();
@@ -318,6 +340,7 @@ namespace aes {
 			// clean up buffers
 			cudaFree(buf_d);
 			cudaFree(key_d);
+			cudaFree(sbox_d);
 
 			return EXIT_SUCCESS;
 		}
@@ -327,17 +350,18 @@ namespace aes {
 		{
 			uint8_t* buf_d;
 			uint8_t* key_d;
-
-			printf("\nBeginning block level parralelization decryption...\n");
+			uint8_t* sbox_d;
+			//printf("\nBeginning block level parralelization decryption...\n");
 
 			// get our space
 			cudaMalloc((void**)&buf_d, sizeof(uint8_t) * aes->padded_length);
 			cudaMalloc((void**)&key_d, sizeof(uint8_t) * aes->expand_length);
+			cudaMalloc((void**)&sbox_d, sizeof(uint8_t) * 256);
 
 			// copy data to device
 			cudaMemcpy(key_d, aes->key_expand, sizeof(uint8_t) * aes->expand_length, cudaMemcpyHostToDevice);
 			cudaMemcpy(buf_d, aes->data, sizeof(uint8_t) * aes->padded_length, cudaMemcpyHostToDevice);
-			cudaMemcpyToSymbol(sboxinv, sboxinv, sizeof(uint8_t) * 256);
+			cudaMemcpy(sbox_d, sboxinv, sizeof(uint8_t) * 256, cudaMemcpyHostToDevice);
 
 			// 
 			const int active_threads = aes->padded_length / AES_BLOCK_SIZE;
@@ -347,7 +371,7 @@ namespace aes {
 			timer().startGpuTimer();
 
 			// decryption kernel
-			kern_aes_decrypt_ecb << <dimBlock, blockSize1d >> > (buf_d, key_d, aes->padded_length, aes->rounds, aes->expand_length);
+			kern_aes_decrypt_ecb << <dimBlock, blockSize1d >> > (buf_d, key_d,sbox_d, aes->padded_length, aes->rounds, aes->expand_length);
 
 			//end timer
 			timer().endGpuTimer();

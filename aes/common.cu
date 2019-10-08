@@ -69,6 +69,19 @@ namespace aes {
 			0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
 		};
 
+		void aes::Common::write_to_file(uint8_t* data, uint32_t length)
+		{
+			std::ofstream outFile("decrypt");
+			if ( outFile.is_open() )
+			{
+				for (int i = 0; i < length; i++)
+				{
+					outFile << data[i];
+				}
+			}
+			outFile.close();
+		}
+
 		// create our AES instance
 		aes_info* aes::Common::create_aes_struct(std::string File,int type)
 		{
@@ -112,7 +125,7 @@ namespace aes {
 			inFile.seekg(0, std::ios::end);
 			uint32_t length = inFile.tellg(); // get length
 			uint32_t padded_length = ((length % 16) == 0) ? length : length + (16 - (length % 16));
-			std::cout << length << " : " << padded_length << std::endl;
+			//std::cout << length << " : " << padded_length << std::endl;
 			inFile.seekg(0, std::ios::beg); // go back 
 
 			// make buffers and such
