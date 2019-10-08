@@ -224,8 +224,9 @@ namespace aes {
 
 			__shared__ uint8_t e_key[176]; // thread buffer
 
-			unsigned long offset = (blockIdx.x * THREADS_PER_BLOCK * AES_BLOCK_SIZE) + (threadIdx.x * AES_BLOCK_SIZE);
-			if (offset >= numbytes) { return; }
+			int offset = (blockIdx.x * blockDim.x) + threadIdx.x;
+			int buff_offset = offset * AES_BLOCK_SIZE;
+			if (buff_offset >= numbytes) { return; }
 
 			// each thread gets a different iv counter
 			iv_d->ctr += offset;
@@ -234,7 +235,7 @@ namespace aes {
 			
 			// copy our IV and block data locally
 			memcpy(ivbuf, iv_d, AES_BLOCK_SIZE);
-			memcpy(databuf, buf_d, AES_BLOCK_SIZE);
+			memcpy(databuf, &buf_d[buff_offset], AES_BLOCK_SIZE);
 			
 			aes_addRoundKey(ivbuf, &key_d[0]);
 
@@ -243,20 +244,21 @@ namespace aes {
 				aes_subBytes(ivbuf);
 				aes_shiftRows(ivbuf);
 				aes_mixColumns(ivbuf);
-				aes_addRoundKey(ivbuf, &key_d[i * 16]);
+				aes_addRoundKey(ivbuf, &key_d[i * AES_BLOCK_SIZE]);
 			}
 			aes_subBytes(ivbuf);
 			aes_shiftRows(ivbuf);
 			aes_addRoundKey(ivbuf, &key_d[160]);
 
 #pragma unroll // todo make a perforamnce analysis on this. could be cool. just macro it 
+			// todo typecast this
 			for (i = 0; i < AES_BLOCK_SIZE; i++)
 			{
 				databuf[i] ^= ivbuf[i];
 			}
 			/* copy thread buffer back into global memory */
 			//memcpy(&buf_d[offset], buf_t, AES_BLOCK_SIZE);
-			memcpy(&buf_d[offset], databuf, AES_BLOCK_SIZE);
+			memcpy(databuf, &buf_d[buff_offset], AES_BLOCK_SIZE);
 			__syncthreads();
 		}
 
@@ -267,6 +269,8 @@ namespace aes {
 			uint8_t* key_d;
 			IV* iv_d;
 			const int blockSize1d = 128;
+			const int active_threads = aes->padded_length / AES_BLOCK_SIZE;
+			dim3 dimBlock = (active_threads + blockSize1d - 1) / blockSize1d;
 
 
 			printf("\nBeginning byte level parralelization encryption...\n");
@@ -283,15 +287,12 @@ namespace aes {
 			cudaMemcpyToSymbol(sbox, sbox, sizeof(uint8_t) * 256);
 			cudaMemcpy(iv_d, aes->ctr_iv, sizeof(IV), cudaMemcpyHostToDevice);
 			checkCUDAError("cudacopy");
-			// 
-			dim3 dimBlock = (aes->padded_length + AES_BLOCK_SIZE - 1) / AES_BLOCK_SIZE * 2;
-			dim3 dimGrid(AES_BLOCK_SIZE);
 
 			//start timer
 			timer().startGpuTimer();
 
 			// decryption kernel
-			kern_aes_encrypt_ctr << <dimBlock, dimGrid >> > (buf_d, key_d,iv_d,aes->padded_length, aes->rounds);
+			kern_aes_encrypt_ctr << <dimBlock, blockSize1d >> > (buf_d, key_d,iv_d,aes->padded_length, aes->rounds);
 			checkCUDAError("kernel");
 			//end timer
 			timer().endGpuTimer();
@@ -315,7 +316,8 @@ namespace aes {
 			uint8_t* key_d;
 			IV* iv_d;
 			const int blockSize1d = 128;
-
+			const int active_threads = aes->padded_length / AES_BLOCK_SIZE;
+			dim3 dimBlock = (active_threads + blockSize1d - 1) / blockSize1d;
 
 			printf("\nBeginning byte level parralelization encryption...\n");
 
@@ -330,18 +332,14 @@ namespace aes {
 			cudaMemcpy(iv_d, aes->ctr_iv, sizeof(IV), cudaMemcpyHostToDevice);
 			// consider moving this to shared memory as well
 			// TODO 
-			cudaMemcpyToSymbol(sboxinv, sboxinv, sizeof(uint8_t) * 256);
+			cudaMemcpyToSymbol(sbox, sbox, sizeof(uint8_t) * 256);
 			checkCUDAError("cudacopy");
-
-			// 
-			dim3 dimBlock = (aes->padded_length + AES_BLOCK_SIZE - 1) / AES_BLOCK_SIZE * 2;
-			dim3 dimGrid(AES_BLOCK_SIZE);
 
 			//start timer
 			timer().startGpuTimer();
 
 			// decryption kernel
-			kern_aes_encrypt_ctr << <dimBlock, dimGrid >> > (buf_d, key_d,iv_d, aes->padded_length, aes->rounds);
+			kern_aes_encrypt_ctr << <dimBlock, blockSize1d >> > (buf_d, key_d,iv_d, aes->padded_length, aes->rounds);
 			checkCUDAError("cudakern");
 			//end timer
 			timer().endGpuTimer();

@@ -9,7 +9,8 @@ namespace aes {
 		aes::Common::PerformanceTimer& timer();
 		void cpu_encrypt(AES_ctx* ctx, uint8_t* buffer,int length);
 		void cpu_decrypt(AES_ctx* ctx, uint8_t* buffer,int legnth);
-
+		void cpu_encrypt_ctr(AES_ctx* ctx, uint8_t* buffer, int length);
+		void cpu_decrypt_ctr(AES_ctx* ctx, uint8_t* buffer, int length);
 
 	}
 }
