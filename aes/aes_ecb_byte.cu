@@ -11,8 +11,8 @@
 #include <string>
 
 #define AES_BLOCK_SIZE 16
-#define THREADS_PER_BLOCK 512
-
+#define blockSize1d 128
+#define MAX_KEY_EXPAND 240
 
 #define F(x)   (((x)<<1) ^ ((((x)>>7) & 1) * 0x1b))
 #define FD(x)  (((x) >> 1) ^ (((x) & 1) ? 0x8d : 0))
@@ -27,50 +27,8 @@ namespace aes {
 			return timer;
 		}
 
-
-		// The round constant word array, Rcon[i], contains the values given by 
-		// x to the power (i-1) being powers of x (x is denoted as {02}) in the field GF(2^8)
-		static const uint8_t Rcon[11] = {
-		  0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36 };
-
 		// S table
 		__constant__ static const uint8_t sbox[256] = {
-			0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5,
-			0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
-			0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0,
-			0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
-			0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc,
-			0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,
-			0x04, 0xc7, 0x23, 0xc3, 0x18, 0x96, 0x05, 0x9a,
-			0x07, 0x12, 0x80, 0xe2, 0xeb, 0x27, 0xb2, 0x75,
-			0x09, 0x83, 0x2c, 0x1a, 0x1b, 0x6e, 0x5a, 0xa0,
-			0x52, 0x3b, 0xd6, 0xb3, 0x29, 0xe3, 0x2f, 0x84,
-			0x53, 0xd1, 0x00, 0xed, 0x20, 0xfc, 0xb1, 0x5b,
-			0x6a, 0xcb, 0xbe, 0x39, 0x4a, 0x4c, 0x58, 0xcf,
-			0xd0, 0xef, 0xaa, 0xfb, 0x43, 0x4d, 0x33, 0x85,
-			0x45, 0xf9, 0x02, 0x7f, 0x50, 0x3c, 0x9f, 0xa8,
-			0x51, 0xa3, 0x40, 0x8f, 0x92, 0x9d, 0x38, 0xf5,
-			0xbc, 0xb6, 0xda, 0x21, 0x10, 0xff, 0xf3, 0xd2,
-			0xcd, 0x0c, 0x13, 0xec, 0x5f, 0x97, 0x44, 0x17,
-			0xc4, 0xa7, 0x7e, 0x3d, 0x64, 0x5d, 0x19, 0x73,
-			0x60, 0x81, 0x4f, 0xdc, 0x22, 0x2a, 0x90, 0x88,
-			0x46, 0xee, 0xb8, 0x14, 0xde, 0x5e, 0x0b, 0xdb,
-			0xe0, 0x32, 0x3a, 0x0a, 0x49, 0x06, 0x24, 0x5c,
-			0xc2, 0xd3, 0xac, 0x62, 0x91, 0x95, 0xe4, 0x79,
-			0xe7, 0xc8, 0x37, 0x6d, 0x8d, 0xd5, 0x4e, 0xa9,
-			0x6c, 0x56, 0xf4, 0xea, 0x65, 0x7a, 0xae, 0x08,
-			0xba, 0x78, 0x25, 0x2e, 0x1c, 0xa6, 0xb4, 0xc6,
-			0xe8, 0xdd, 0x74, 0x1f, 0x4b, 0xbd, 0x8b, 0x8a,
-			0x70, 0x3e, 0xb5, 0x66, 0x48, 0x03, 0xf6, 0x0e,
-			0x61, 0x35, 0x57, 0xb9, 0x86, 0xc1, 0x1d, 0x9e,
-			0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94,
-			0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
-			0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68,
-			0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
-		};
-
-		// S table
-		static const uint8_t sbox1[256] = {
 			0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5,
 			0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
 			0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0,
@@ -166,40 +124,34 @@ namespace aes {
 		}
 
 		// add round key operation
-		__device__ void aes_addRoundKey_byte(int index, uint8_t *buf, uint8_t *key)
+		__device__ void aes_addRoundKey_byte(int map_index,int index, uint8_t *buf, uint8_t *key)
 		{
-			int key_index = index >= 16 ? index - 16 : index;
-			buf[index] ^= key[key_index];
+			// key is only 16,24, or 32 bytes so we need where we would go
+			buf[index] ^= key[map_index];
 		}
 
 		// shift row operation
-		__device__ void aes_shiftRows_byte(int index, uint8_t* buf)
+		__device__ void aes_shiftRows_byte(int index, uint8_t* buf, uint8_t* map_buf_s)
 		{
 			uint8_t i, shift;
-			static uint8_t map[16] = { 0,13,10,7,4,1,14,11,8,5,2 ,15,12,9 ,6 ,3 };
-			int key_index = index >= 16 ? index - 16 : index;
-			// even row 0 will read but will just right back to same place
-			// maybe less optimal but simpler code
+
+
 			i = buf[index]; // read yours
-			shift = map[key_index];
-			shift = index >= 16 ? shift + 16 : shift;
+			shift = map_buf_s[index];
 			__syncthreads();
 			// write yours to new row position
 			buf[shift] = i;
 		}
 
 		// shift row operation
-		__device__ void aes_shiftRows_inv_byte(int index, uint8_t* buf)
+		__device__ void aes_shiftRows_inv_byte(int index, uint8_t* buf,uint8_t* map_buf_s)
 		{
 			uint8_t i, shift;
 			// make this 32 OR just subtract 16 from tid
-			static uint8_t map[16] = { 0,5,10,15,4,9,14,3,8,13,2,7,12,1,6,11 };
-			int key_index = index >= 16 ? index - 16 : index;
 			// even row 0 will read but will just right back to same place
 			// maybe less optimal but simpler code
 			i = buf[index]; // read yours
-			shift = map[key_index];
-			shift = index >= 16 ? shift + 16 : shift;
+			shift = map_buf_s[index];
 			__syncthreads();
 			// write yours to new row position
 			buf[shift] = i;
@@ -245,106 +197,113 @@ namespace aes {
 		}
 
 		// aes encrypt algorithm one thread/one block with AES_BLOCK_SIZE 
-		__global__ void kern_aes_encrypt_ecb_byte(uint8_t *buf_d, unsigned long numbytes, uint8_t *ctx_key) {
+		__global__ void kern_aes_encrypt_ecb_byte(uint8_t *buf_d, uint8_t *key_d,uint8_t* row_map, int numbytes, int rounds, int key_length) {
 			uint8_t i;
-			//uint8_t buf_t[AES_BLOCK_SIZE]; // thread buffer
 
-			__shared__ uint8_t e_key[176]; // thread buffer
-			__shared__ uint8_t buf_t[32]; // thread buffer
-
-			//printf("Thread %d\n", threadIdx.x);
 			int index = (blockIdx.x * blockDim.x) + threadIdx.x;
 			if (index >= numbytes) { return; }
 
+			__shared__ uint8_t e_key[240];
+			__shared__ uint8_t buf_t[blockSize1d]; // thread buffer
+			__shared__ uint8_t row_map_s[blockSize1d];
+
+			int copy_bytes = 0;
+
 			// someones gotta copy
-			if ((index % 16) == 0)
+			if ((index % blockSize1d) == 0)
 			{
-				int num_bytes = AES_BLOCK_SIZE; // each block can do one or two encrypts
-				memcpy(buf_t, &buf_d[index], num_bytes);
-				memcpy(e_key, &ctx_key[0], 176);
+				// since shared mem is per block we copy in what well need
+				copy_bytes = (numbytes < index + 128) ? (numbytes - index) : blockSize1d;
+				memcpy(buf_t, &buf_d[index], copy_bytes);
+				memcpy(e_key, &key_d[0], key_length);
+				memcpy(row_map_s, row_map, blockSize1d);
 			}
-			int aes_index = index % 16;
+			
+			int aes_index = index % AES_BLOCK_SIZE;
 			__syncthreads();
 
-			aes_addRoundKey_byte(aes_index, buf_t, e_key);
+			aes_addRoundKey_byte(aes_index, index, buf_t, &e_key[0]);
 
 			__syncthreads();
-			for (i = 1; i < 10; ++i)
+			for (i = 1; i < rounds; ++i)
 			{
-				aes_subBytes_byte(aes_index, buf_t);
+				aes_subBytes_byte(index, buf_t);
 				__syncthreads();
-				aes_shiftRows_byte(aes_index, buf_t);
+				aes_shiftRows_byte(index, buf_t, row_map_s);
 				__syncthreads();
-				aes_mixColumns_byte(aes_index, buf_t);
+				aes_mixColumns_byte(index, buf_t);
 				__syncthreads();
-				aes_addRoundKey_byte(aes_index, buf_t, &e_key[i * 16]);
+				aes_addRoundKey_byte(aes_index,index, buf_t, &e_key[i * AES_BLOCK_SIZE]);
 				__syncthreads();
 			}
-			aes_subBytes_byte(aes_index, buf_t);
+			aes_subBytes_byte(index, buf_t);
 			__syncthreads();
-			aes_shiftRows_byte(aes_index, buf_t);
+			aes_shiftRows_byte(index, buf_t,row_map_s);
 			__syncthreads();
-			aes_addRoundKey_byte(aes_index, buf_t, &e_key[160]);
+			aes_addRoundKey_byte(aes_index,index, buf_t, &e_key[key_length-AES_BLOCK_SIZE]);
 			__syncthreads();
 
 			/* someone has to write it back */
-			if ((index % 16) == 0)
+			if ((index % blockSize1d) == 0)
 			{
-				int num_bytes = AES_BLOCK_SIZE; // each block can do one or two encrypts
-				memcpy(&buf_d[index], buf_t, num_bytes);
+				memcpy(&buf_d[index], buf_t, copy_bytes);
 			}
 
 		}
 
 
 		// aes decrypt algorithm
-		__global__ void kern_aes_decrypt_ecb_byte(uint8_t *buf_d, unsigned long numbytes, uint8_t *ctx_key_d) {
-			uint8_t i, rcon;
+		__global__ void kern_aes_decrypt_ecb_byte(uint8_t *buf_d, uint8_t *key_d, uint8_t* row_map, int numbytes, int rounds, int key_length) {
+			uint8_t i;
 			int index = (blockIdx.x * blockDim.x) + threadIdx.x;
 			if (index >= numbytes) { return; }
-
+			int copy_bytes = 0;
 			int aes_index = index % 16;
 
-			__shared__ uint8_t e_key[176]; // thread buffer
-			__shared__ uint8_t buf_t[32]; // thread buffer
+			// TODO this needs to be per blocksize and EKEY should maybe just be set
+			// to highest
+			__shared__ uint8_t e_key[240];
+			__shared__ uint8_t buf_t[blockSize1d]; // thread buffer
+			__shared__ uint8_t row_map_s[blockSize1d];
 
 			// someones gotta copy
-			if ((index % 16) == 0)
+			if ((index % blockSize1d) == 0)
 			{
-				int num_bytes = AES_BLOCK_SIZE; // each block can do one or two encrypts
-				memcpy(buf_t, &buf_d[index], num_bytes);
-				//memcpy(e_key, &ctx_key[0], 176);
+				// since shared mem is per block we copy in what well need
+				copy_bytes = (numbytes < index + 128) ? (numbytes - index) : blockSize1d;
+				memcpy(buf_t, &buf_d[index], copy_bytes);
+				memcpy(e_key, &key_d[0], key_length);
+				memcpy(row_map_s, row_map, blockSize1d);
 			}
 			__syncthreads();
 
-			aes_addRoundKey_byte(aes_index, buf_t, &ctx_key_d[160]);
+			aes_addRoundKey_byte(aes_index,index,buf_t, &e_key[key_length-AES_BLOCK_SIZE]);
 			__syncthreads();
-			for (int round = (10 - 1); round > 0; --round)
+			for (int round = (rounds - 1); round > 0; --round)
 			{
-				aes_shiftRows_inv_byte(aes_index, buf_t);
+				aes_shiftRows_inv_byte(index,buf_t, row_map_s);
 				__syncthreads();
 
-				aes_subBytes_inv_byte(aes_index, buf_t);
+				aes_subBytes_inv_byte(index, buf_t);
 				__syncthreads();
 
-				aes_addRoundKey_byte(aes_index, buf_t, &ctx_key_d[round * 16]);
+				aes_addRoundKey_byte(aes_index,index,buf_t, &e_key[round * AES_BLOCK_SIZE]);
 				__syncthreads();
 
-				aes_mixColumns_inv_byte(aes_index, buf_t);
+				aes_mixColumns_inv_byte(index, buf_t);
 				__syncthreads();
 			}
 
-			aes_shiftRows_inv_byte(aes_index, buf_t);
+			aes_shiftRows_inv_byte(index, buf_t, row_map_s);
 			__syncthreads();
-			aes_subBytes_inv_byte(aes_index, buf_t);
+			aes_subBytes_inv_byte(index, buf_t);
 			__syncthreads();
-			aes_addRoundKey_byte(aes_index, buf_t, &ctx_key_d[0]);
+			aes_addRoundKey_byte(aes_index,index,buf_t, &e_key[0]);
 
 			/* someone has to write it back */
-			if ((index % 16) == 0)
+			if ((index % blockSize1d) == 0)
 			{
-				int num_bytes = AES_BLOCK_SIZE; // each block can do one or two encrypts
-				memcpy(&buf_d[index], buf_t, num_bytes);
+				memcpy(&buf_d[index], buf_t, copy_bytes);
 			}
 			__syncthreads();
 		}
@@ -354,29 +313,38 @@ namespace aes {
 		{
 			uint8_t* buf_d;
 			uint8_t* key_d;
-			const int blockSize1d = 128;
-
+			uint8_t* row_map_d;
+			// each thread gets one byte!
+			const int active_threads = aes->padded_length;
+			dim3 dimBlock = (active_threads + blockSize1d - 1) / blockSize1d;
+			int map_copies = blockSize1d / AES_BLOCK_SIZE;
+			static uint8_t map[16] = { 0,13,10,7,4,1,14,11,8,5,2 ,15,12,9 ,6 ,3 };
 
 			printf("\nBeginning byte level parralelization encryption...\n");
 
 			// get our space
 			cudaMalloc((void**)&buf_d, sizeof(uint8_t) * aes->padded_length);
-			cudaMalloc((void**)&key_d, sizeof(uint8_t) * aes->expand_length);
+			cudaMalloc((void**)&key_d, sizeof(uint8_t) * MAX_KEY_EXPAND);
+			cudaMalloc((void**)&row_map_d, sizeof(uint8_t) * blockSize1d);
 			checkCUDAError("cudaMalloc");
 			// copy data to device
-			cudaMemcpy(key_d, aes->key_expand, sizeof(uint8_t) * aes->expand_length, cudaMemcpyHostToDevice);
+			cudaMemcpy(key_d, aes->key_expand, sizeof(uint8_t) * MAX_KEY_EXPAND, cudaMemcpyHostToDevice);
 			cudaMemcpy(buf_d, aes->data,sizeof(uint8_t) * aes->padded_length, cudaMemcpyHostToDevice);
 			cudaMemcpyToSymbol(sbox, sbox, sizeof(uint8_t) * 256);
 			checkCUDAError("cudacopy");
-			// 
-			dim3 dimBlock = (aes->padded_length + AES_BLOCK_SIZE - 1) / AES_BLOCK_SIZE * 2;
-			dim3 dimGrid(AES_BLOCK_SIZE);
+
+			// I know what you are thinking .... wtf is this eric and I would tend to agree with you
+			for (int i = 0; i < map_copies; i++)
+			{
+				cudaMemcpy(&row_map_d[i*AES_BLOCK_SIZE], map, sizeof(uint8_t) * AES_BLOCK_SIZE, cudaMemcpyHostToDevice);
+				for (int i = 0; i < AES_BLOCK_SIZE; i++) map[i] += 16;
+			}
 
 			//start timer
 			timer().startGpuTimer();
 
 			// decryption kernel
-			kern_aes_encrypt_ecb_byte << <dimBlock, dimGrid >> > (buf_d, aes->padded_length, key_d);
+			kern_aes_encrypt_ecb_byte << <dimBlock, blockSize1d >> > (buf_d, key_d,row_map_d,aes->padded_length, aes->rounds, aes->expand_length);
 			checkCUDAError("kernel");
 			//end timer
 			timer().endGpuTimer();
@@ -387,6 +355,7 @@ namespace aes {
 			// clean up buffers
 			cudaFree(buf_d);
 			cudaFree(key_d);
+			cudaFree(row_map_d);
 
 			return EXIT_SUCCESS;
 		}
@@ -397,30 +366,40 @@ namespace aes {
 		{
 			uint8_t* buf_d;
 			uint8_t* key_d;
-			const int blockSize1d = 128;
-
+			uint8_t* row_map_d;
+			// each thread gets one byte!
+			const int active_threads = aes->padded_length;
+			dim3 dimBlock = (active_threads + blockSize1d - 1) / blockSize1d;
+			int map_copies = blockSize1d / AES_BLOCK_SIZE;
+			static uint8_t map[16] = { 0,5,10,15,4,9,14,3,8,13,2,7,12,1,6,11 };
 
 			printf("\nBeginning byte level parralelization encryption...\n");
 
 			// get our space
 			cudaMalloc((void**)&buf_d, sizeof(uint8_t) * aes->padded_length);
-			cudaMalloc((void**)&key_d, sizeof(uint8_t) * aes->expand_length);
+			cudaMalloc((void**)&key_d, sizeof(uint8_t) * MAX_KEY_EXPAND);
+			cudaMalloc((void**)&row_map_d, sizeof(uint8_t) * blockSize1d);
 			checkCUDAError("cudaMalloc");
 			// copy data to device
-			cudaMemcpy(key_d, aes->key_expand, sizeof(uint8_t) * aes->expand_length, cudaMemcpyHostToDevice);
+			cudaMemcpy(key_d, aes->key_expand, sizeof(uint8_t) * MAX_KEY_EXPAND, cudaMemcpyHostToDevice);
 			cudaMemcpy(buf_d, aes->data, sizeof(uint8_t) * aes->padded_length, cudaMemcpyHostToDevice);
+			// consider moving this to shared memory as well
+			// TODO 
 			cudaMemcpyToSymbol(sboxinv, sboxinv, sizeof(uint8_t) * 256);
 			checkCUDAError("cudacopy");
 
-			// 
-			dim3 dimBlock = (aes->padded_length + AES_BLOCK_SIZE - 1) / AES_BLOCK_SIZE * 2;
-			dim3 dimGrid(AES_BLOCK_SIZE);
+			// I know what you are thinking .... wtf is this eric and I would tend to agree with you
+			for (int i = 0; i < map_copies; i++)
+			{
+				cudaMemcpy(&row_map_d[i*AES_BLOCK_SIZE], map, sizeof(uint8_t) * AES_BLOCK_SIZE, cudaMemcpyHostToDevice);
+				for (int i = 0; i < AES_BLOCK_SIZE; i++) map[i] += 16;
+			}
 
 			//start timer
 			timer().startGpuTimer();
 
 			// decryption kernel
-			kern_aes_decrypt_ecb_byte << <dimBlock, dimGrid >> > (buf_d, aes->padded_length, key_d);
+			kern_aes_decrypt_ecb_byte << <dimBlock, blockSize1d >> > (buf_d, key_d, row_map_d, aes->padded_length, aes->rounds, aes->expand_length);
 			checkCUDAError("cudakern");
 			//end timer
 			timer().endGpuTimer();

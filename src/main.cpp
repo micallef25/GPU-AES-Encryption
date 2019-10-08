@@ -18,12 +18,14 @@
 #include <aes/aes_ecb_block.h>
 #include <aes/common.h>
 #include <aes/cpu_aes.h>
+#include <aes/aes_ctr.h>
 
 int main(int argc, char** argv) {
 
 	bool benchmark = false;
 	int aes_type = -1;
 
+	//TODO add user input of their own key and maybe a nice feature of encryption / decryption
 	cxxopts::Options options(argv[0], " - this program aes encryption on the CPU, and GPU, benchmark speeds for parallelizing at a block level and byte level");
 	options.add_options()
 		("b,benchmark", "Benchmark", cxxopts::value<bool>(benchmark))
@@ -38,22 +40,23 @@ int main(int argc, char** argv) {
 	aes_type = result["keysize"].as<int>();
 
 	struct AES_ctx ctx;
-	uint8_t key[32];
-	for (int i = 0; i < 32; i++) key[i] = i;
-	AES_init_ctx(&ctx, key);
 
 	aes_info* aes_byte = aes::Common::create_aes_struct(File, aes_type);
 	aes_info* aes_block = aes::Common::create_aes_struct(File, aes_type);
 	aes_info* aes_original = aes::Common::create_aes_struct(File, aes_type);
 	aes_info* aes_cpu = aes::Common::create_aes_struct(File, aes_type);
+	aes_info* aes_ctr = aes::Common::create_aes_struct(File, aes_type);
+	AES_init_ctx(&ctx, aes_cpu->keys);
 
 	aes::block_level::aes_encrypt_block(aes_block);
 	printElapsedTime(aes::block_level::timer().getGpuElapsedTimeForPreviousOperation(), "Encrypt Block level (std::chrono Measured)");
 	aes::byte_level::aes_encrypt_byte(aes_byte);
 	printElapsedTime(aes::byte_level::timer().getGpuElapsedTimeForPreviousOperation(), "Encrypt Byte level (std::chrono Measured)");
-	aes::CPU::cpu_encrypt(&ctx,aes_cpu->data);
+	aes::CPU::cpu_encrypt(&ctx,aes_cpu->data,aes_cpu->padded_length);
 	printElapsedTime(aes::CPU::timer().getCpuElapsedTimeForPreviousOperation(), "Encrypt CPU (std::chrono Measured)");
 
+	//aes::ctr::aes_ctr_encrypt(aes_ctr);
+	//printElapsedTime(aes::ctr::timer().getGpuElapsedTimeForPreviousOperation(), "Encrypt CTR Mode (std::chrono Measured)");
 
 	int padded_length = aes_byte->padded_length;
 
@@ -65,13 +68,35 @@ int main(int argc, char** argv) {
 	else {
 		std::cout << "encryption differs " << std::endl;
 	}
+	pass = memcmp(aes_cpu->data, aes_block->data, padded_length);
+	if (pass == 0)
+	{
+		std::cout << "encrypted files similar" << std::endl;
+	}
+	else {
+		std::cout << "encryption differs " << std::endl;
+		for (int i = 0; i < aes_block->padded_length; i++)
+		{
+			std::cout << aes_block->data[i];
+		}
+		std::cout << std::endl;
+		for (int i = 0; i < aes_cpu->padded_length; i++)
+		{
+			std::cout << aes_cpu->data[i];
+		}
+		std::cout << std::endl;
+	}
 
 	aes::block_level::aes_decrypt_block(aes_block);
 	printElapsedTime(aes::block_level::timer().getGpuElapsedTimeForPreviousOperation(), "Decrypt Block level (std::chrono Measured)");
 	aes::byte_level::aes_decrypt_byte(aes_byte);
 	printElapsedTime(aes::byte_level::timer().getGpuElapsedTimeForPreviousOperation(), "Decrypt Byte level (std::chrono Measured)");
-	aes::CPU::cpu_decrypt(&ctx, aes_cpu->data);
+	aes::CPU::cpu_decrypt(&ctx, aes_cpu->data, aes_cpu->padded_length);
 	printElapsedTime(aes::CPU::timer().getCpuElapsedTimeForPreviousOperation(), "Decrypt CPU (std::chrono Measured)");
+	
+	aes::ctr::aes_ctr_decrypt(aes_ctr);
+	printElapsedTime(aes::ctr::timer().getGpuElapsedTimeForPreviousOperation(), "Decrypt CTR Mode (std::chrono Measured)");
+	
 
 	pass = memcmp(aes_original->data, aes_block->data,padded_length);
 	if (pass == 0)
@@ -103,6 +128,8 @@ int main(int argc, char** argv) {
 	aes::Common::destroy_aes_struct(aes_original);
 	aes::Common::destroy_aes_struct(aes_byte);
 	aes::Common::destroy_aes_struct(aes_block);
+	aes::Common::destroy_aes_struct(aes_cpu);
+	aes::Common::destroy_aes_struct(aes_ctr);
 
     system("pause"); // stop Win32 console from closing on exit
 

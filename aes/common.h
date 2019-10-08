@@ -34,10 +34,19 @@ inline int ilog2ceil(int x) {
     return x == 1 ? 0 : ilog2(x - 1) + 1;
 }
 
+//https://tools.ietf.org/html/rfc3686#section-2.1
+//page 6 tells the in depth desription
+typedef struct IV_struct
+{
+	uint32_t nonce; // a unique 32 bit field
+	uint64_t uiv; // a unique IV field
+	uint32_t ctr; // counter
+}IV;
+
 // make enum later
-#define AES128 128
-#define AES196 196
-#define AES256 256
+#define _AES128_ 128
+#define _AES196_ 196
+#define _AES256_ 256
 
 typedef struct aes_info
 {
@@ -50,6 +59,7 @@ typedef struct aes_info
 	int file_length; // excludes padding
 	int padded_length;
 	int expand_length;
+	IV* ctr_iv;
 }aes_info;
 
 
@@ -58,7 +68,7 @@ namespace aes {
 
 		aes_info* create_aes_struct(std::string File, int type);
 		void destroy_aes_struct(aes_info* aes);
-		void KeyExpansion(uint8_t* RoundKey, const uint8_t* Key);
+		void KeyExpansion(uint8_t* RoundKey, const uint8_t* Key, int type);
 		/**
 		* This class is used for timing the performance
 		* Uncopyable and unmovable
