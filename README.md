@@ -9,29 +9,28 @@ CUDA AES encryption
 * Tested on: Windows 10, i5, Nvidia GTX 1660 (Personal)
 
 
-- [Heading 1](#heading-1)
-  - [Heading 2](#heading-2)
-  - [Heading 3](#heading-3)
+- [AES Overview](#heading-1)
+  - [ECB Mode](#heading-2)
+  - [CTR Mode](#heading-3)
 
-### Overview
+- [Performance Analysis](#heading-4)
+  - [Block Level](#heading-5)
+  - [Byte Level](#heading-6)
 
-#### AES
-
-### Analysis
-
-### Things tried 
-
-computing table into shared memory for fast table look ups rather than memory reads
-
-128 bits per thread basis
-
-16 threads per 128 bits writing to shared memory buffers
-
-# Heading 1
+# AES Overview
 Lorem ipsum...
 
-## Heading 2
+## ECB Mode
 Lorem ipsum...
 
-## Heading 3
+## CTR Mode
+Lorem ipsum... (the added text)
+
+# Performance Analysis
+Lorem ipsum...
+
+## Block Level
+Lorem ipsum...
+
+## Byte Level
 Lorem ipsum... (the added text)
