@@ -9,13 +9,13 @@ CUDA AES encryption
 * Tested on: Windows 10, i5, Nvidia GTX 1660 (Personal)
 
 
-- [AES Overview](#heading-1)
-  - [ECB Mode](#heading-2)
-  - [CTR Mode](#heading-3)
+- [AES Overview](#AES-Overview)
+  - [ECB Mode](#ECB-Mode)
+  - [CTR Mode](#CTR-Mode)
 
-- [Performance Analysis](#heading-4)
-  - [Block Level](#heading-5)
-  - [Byte Level](#heading-6)
+- [Performance Analysis](#Performance Analysis)
+  - [Block Level](#Block Level)
+  - [Byte Level](#Byte Level)
 
 # AES Overview
 Lorem ipsum...
