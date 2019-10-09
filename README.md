@@ -151,7 +151,7 @@ With byte level granularity we get the same benefit of exploiting the use of sha
 
 ![](img/all_large.png)
 
-![](img/all_large_raw.PNG)
+![](img/all_large_r.PNG)
 
 ![](img/smalldata_all.png)
 
