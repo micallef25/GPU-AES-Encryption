@@ -493,6 +493,8 @@ local.properties
 .settings/
 .loadpath
 
+encryption_files/
+
 # Eclipse Core
 .project
 

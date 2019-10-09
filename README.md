@@ -35,20 +35,30 @@ The CPU benchmark is written in C, The GPU benchmark is written in CUDA.
 
 The GPU has two different methods for encrypting and decrypting. One can encrypt and decypt at the granularity of a byte or a block. Performance and details are discussed below.
 
-# AES Overview
+Me after implementing a cryptography algorithm.
 
 ![Alt Text](https://media.giphy.com/media/Z543HuFdQAmkg/giphy.gif)
+
+# AES Overview
 
 AES is a highly popular cryptography algorithm. This algorithm allows the user to encrpyt and decrypt files using a key. There are modes ECB, CBC, OFB, CFB, CTR each offering a different way of encrypting and decrypting files. 
 
 ## ECB Mode
 
-ECB mode is one mode implemented for benchmarking in this repo. It is highly parallelizable this mode is a perfect fit for the GPU. From the diagram above we can see how the algorithm works. We
+ECB mode is one mode implemented for benchmarking in this repo. It is highly parallelizable this mode is a perfect fit for the GPU. From the diagram above we can see how the algorithm works. We inject our plaintext and key into the cipher and our output data is now an encrypted cipher with the provided key.
 
 ![](img/ecb.PNG)
 
+The major flaw with ECB mode is that this mode replicates patterns. So you could have an encrypted image that looks something like below where the middle image is encrypted using ECB mode and the right is using any other mode. As you can asee we can still see the image pretty clearly even after encryption has completed.
+
+![](img/ecbflaw.png)
+
+
 ## CTR Mode
-Lorem ipsum... (the added text)
+
+CTR mode has the same ciphering scheme but instead of our plain text being ciphered we cipher an initialization vector which has a 32 bit counter and and XOR the output with our plain text. it is important to note that when using CTR mode the initialization vector or IV must be unique. The 128 bit IV consists of a 32 bit nonce a 64 bit uniqu 
+
+The nice thing about CTR mode is that your decrpytion and encryption are the same. So code size to implement is smaller than any other AES algorithm.
 
 ![](img/ctr.PNG)
 
@@ -66,7 +76,7 @@ Each round goes through 4 transformations. Column inverse, row shift, sub bytes 
 
 ## Mix Columns
 
-The most confusing... each column is combined using an inertible linear transformation.
+each column is combined using an inertible linear transformation.
 
 ![](img/mixcolumns.PNG)
 
@@ -100,6 +110,22 @@ So for block level parallelism if we have a text file of length 128 bytes we wil
 For byte level parallelism with the same text file length of 128 bytes we will need 128 threads to finish the work.
 
 operating at a byte level seems a bit of overkill but you never really know until you do it.
+
+![](img/all_large.png)
+
+![](img/smalldata_all.png)
+
+As we compare across GPU and CPU we begin to see the benefit of parallel processing. Even at 4kbytes the CPU is orders of magnitude slower. On a 183Mb file our GPU is a whopping 250 times faster block style and even 33 times faster byte style. 
+
+![](img/bytevblock.png)
+
+![](img/bytevblocklarge.png)
+
+Looking at our performance of byte vs block we see that in smaller data sets (4k - 30k) The byte and block style have similar run times. But as soon as we get into higher than 30k this difference is apparent and we see that block style is more effective. 
+
+TODO add why 
+
+So, it looks like the saying of too many cooks in the kitchen is indeed true in this case.
 
 ## Block Level
 
