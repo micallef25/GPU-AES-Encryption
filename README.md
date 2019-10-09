@@ -11,14 +11,15 @@ CUDA AES encryption
 - [Repo Contents](#Repo-Contents)
 
 - [AES Overview](#AES-Overview)
-  - [ECB Mode](#ECB-Mode)
-  - [CTR Mode](#CTR-Mode)
+	- [Cipher](#Cipher)
+		- [Mix Columns](#Mix-Columns)
+  		- [Shift Rows](#Shift-Rows)
+  		- [Sub Bytes](#Sub-Bytes)
+  		- [Add Round Key](#Add-Round-Key)
+  	- [ECB Mode](#ECB-Mode)
+  	- [CTR Mode](#CTR-Mode)
 
 - [Algorithm Overview](#Algorithm-Overview)
-  - [Mix Columns](#Mix-Columns)
-  - [Shift Rows](#Shift-Rows)
-  - [Sub Bytes](#Sub-Bytes)
-  - [Add Round Key](#Add-Round-Key)
 
 - [Performance Analysis](#Performance-Analysis)
   - [Block Level](#Block-Level)
@@ -41,62 +42,71 @@ Me after implementing a cryptography algorithm.
 
 # AES Overview
 
-AES is a highly popular cryptography algorithm. This algorithm allows the user to encrpyt and decrypt files using a key. There are modes ECB, CBC, OFB, CFB, CTR each offering a different way of encrypting and decrypting files. 
+AES is a highly popular cryptography algorithm. 
+AES is a symmetric key algorithm meaning you use the same key to encrypt or decrypt a file. There exist modes ECB, CBC, OFB, CFB, CTR each offering 128 bit, 192bit and 256 bit level encryption. Each mode goes about encrypting the data set in a different manner. This repo focuses on ECB and CTR mode encryption.
+
+## Cipher
+
+The term cipher in AES refers to how the encryption is handled. In the case of AES this involves transforming our bytes through a series of rounds. each round is previuously illustrated and shown below.
+
+### Mix Columns
+
+each column is combined using an inertible linear transformation.
+
+![](img/mixcolumns.PNG)
+
+### Shift Rows 
+
+bytes are shifted by row accordign to which row they are in.
+
+![](img/shiftrows.PNG)
+
+### Sub Bytes
+
+Each byte is substituted with the value in the pre computed look up table
+
+![](img/subbytes.PNG)
+
+### Add Round Key
+
+Each byte of the current state transformation is XOR'd with the roundkey
+
+![](img/addroundkey.PNG)
 
 ## ECB Mode
 
-ECB mode is one mode implemented for benchmarking in this repo. It is highly parallelizable this mode is a perfect fit for the GPU. From the diagram above we can see how the algorithm works. We inject our plaintext and key into the cipher and our output data is now an encrypted cipher with the provided key.
-
 ![](img/ecb.PNG)
 
-The major flaw with ECB mode is that this mode replicates patterns. So you could have an encrypted image that looks something like below where the middle image is encrypted using ECB mode and the right is using any other mode. As you can asee we can still see the image pretty clearly even after encryption has completed.
+ECB mode is one mode implemented for benchmarking in this repo. It is highly parallelizable. From the diagram above we can see how the algorithm works. We inject our plaintext and key into the cipher and our output data is now encrypted with the provided key. 
+
+The major flaw with ECB mode is that this mode replicates patterns. So you could have an encrypted image that looks something like below where the middle image is encrypted using ECB mode and the right is using any other mode. As shown we can still see the image pretty clearly even after encryption has completed. Other modes address this issue by addinga bit of pseudo randomness into the cipher.
 
 ![](img/ecbflaw.png)
 
 
 ## CTR Mode
 
-CTR mode has the same ciphering scheme but instead of our plain text being ciphered we cipher an initialization vector which has a 32 bit counter and and XOR the output with our plain text. it is important to note that when using CTR mode the initialization vector or IV must be unique. The 128 bit IV consists of a 32 bit nonce a 64 bit uniqu 
-
-The nice thing about CTR mode is that your decrpytion and encryption are the same. So code size to implement is smaller than any other AES algorithm.
-
 ![](img/ctr.PNG)
+
+From the diagram we see that CTR mode has the same ciphering scheme but, instead of our plain text being injected we cipher an initialization vector. 
+
+an initialization vector or IV contains a 32 bit nonce, 32 bit counter and 64 bit unique value.
+
+after ciphering this IV we XOR it with our output to generate our encrypted file. The counter in the lower 32 bits of the IV add the pseudo randomness which fixes the issue that ECB has.
+
+The nice thing about CTR mode is that your decrpytion and encryption are the same. So in terms of code size this algorithm is the lightest.
 
 # Algorithm Overview
 
 AES128, AES192 and AES256 all follow the same schema where we continually transform our input data over a set of rounds and a fixed size key.
 
-For AES 128 we have a fixed size key of 16bytes, an expanded key of 176bytes and 10 rounds of transformations that each 16 bytes of data mmust go through.
+For AES 128 we have a fixed size key of 16bytes, an expanded key of 176bytes and 10 rounds of transformations that each 16 bytes of data must go through.
 
 For AES 192 we have a fixed size key of 24 bytes, an expanded key of 204 bytes and 12 rounds of transformations that the 16 bytes of data must go through
 
 For AES 256 we have a fixed size key of 32 bytes, an expanded key of 240 bytes and 14 rounds of transformations that the 16 bytes of data must go through.
 
-Each round goes through 4 transformations. Column inverse, row shift, sub bytes and adding the round key. Each transformation is briefly discussed below.
-
-## Mix Columns
-
-each column is combined using an inertible linear transformation.
-
-![](img/mixcolumns.PNG)
-
-## Shift Rows 
-
-bytes are shifted by row accordign to which row they are in.
-
-![](img/shiftrows.PNG)
-
-## Sub Bytes
-
-Each byte is substituted with the value in the pre computed look up table
-
-![](img/subbytes.PNG)
-
-## Add Round Key
-
-Each byte of the current state transformation is XOR'd with the roundkey
-
-![](img/addroundkey.PNG)
+Each round consists of 4 transformations. Column inverse, row shift, sub bytes and adding the round key. These were shown above.
 
 # Performance Analysis
 Since AES can be parrallelized in a few different ways I chose to investigate the question how much parrallelism is too much? 
