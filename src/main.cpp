@@ -86,7 +86,6 @@ int main(int argc, char** argv) {
 
 	//aes::Common::write_to_file(aes_cpu->data, aes_block->padded_length);
 
-<<<<<<< HEAD
 	//int byepass = memcmp(aes_cpu->data, aes_byte->data, aes_byte->padded_length);
 	//if (byepass == 0)
 	//{

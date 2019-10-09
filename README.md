@@ -18,9 +18,9 @@ CUDA AES encryption
   	- [ECB Mode](#ECB-Mode)
   	- [CTR Mode](#CTR-Mode)
 - [Algorithm Overview](#Algorithm-Overview)
-- [Performance Analysis](#Performance-Analysis)
   - [Block Level](#Block-Level)
   - [Byte Level](#Byte-Level)
+- [Performance Analysis](#Performance-Analysis)
   - [Compiler Exploits](#Compiler-Exploits)
 - [Resources](#Resources)
 
@@ -37,7 +37,8 @@ All data gathered can be found excel sheet but there is alot so all data is not 
 # AES Overview
 
 AES is a highly popular cryptography algorithm. 
-AES is a symmetric key algorithm meaning you use the same key to encrypt or decrypt a file. There exist modes ECB, CBC, OFB, CFB, CTR each offering 128 bit, 192bit and 256 bit level encryption. Each mode goes about encrypting the data set in a different manner. This repo focuses on ECB and CTR mode encryption.
+AES is a symmetric key algorithm meaning you use the same key to encrypt or decrypt a file. 
+There exist modes ECB, CBC, OFB, CFB, CTR each offering 128 bit, 192bit and 256 bit level encryption. Each mode goes about encrypting the data set in a different manner. This repo focuses on ECB and CTR mode encryption.
 
 ## Cipher
 
@@ -102,7 +103,6 @@ For AES 256 we have a fixed size key of 32 bytes, an expanded key of 240 bytes a
 
 Each round consists of 4 transformations. Column inverse, row shift, sub bytes and adding the round key. These were shown above.
 
-# Performance Analysis
 Since AES can be parrallelized in a few different ways I chose to investigate the question how much parrallelism is too much? 
 
 From analyzing the algorithm you can split it at a block level granularity where each thread operates on one 16 byte block. 
@@ -115,29 +115,17 @@ For byte level parallelism with the same text file length of 128 bytes we will n
 
 operating at a byte level seems a bit of overkill but you never really know until you do it.
 
-![](img/all_large.png)
-
-![](img/smalldata_all.png)
-
-As we compare across GPU and CPU we begin to see the benefit of parallel processing. Even at 4kbytes the CPU is orders of magnitude slower. On a 183Mb file our GPU is a whopping 250 times faster block style and even 33 times faster byte style. 
-
-![](img/bytevblock.png)
-
-![](img/bytevblocklarge.png)
-
-Looking at our performance of byte vs block we see that in smaller data sets (4k - 30k) The byte and block style have similar run times. But as soon as we get into higher than 30k this difference is apparent and we see that block style is more effective. 
-
-TODO add why 
-
-So, it looks like the saying of too many cooks in the kitchen is indeed true in this case.
-
 ## Block Level
 
 ![](img/blocklevel.png)
 
 At a block level each thread reads its respective 16 bytes and begins its transformations.
 
-Each round we must perform 16 reads from our look up table and 16 reads from our roundkey per thread. To help reduce latency we move these into shared memory. Now upon launch one thread can read in all of our keys and look up table and every thread in the block can read from shared memory as opposed to main memory. Barring any bank conflicts a shared memory read costs around two cycles. This removes the stereotypical memory bottleneck.
+Each round we must perform 16 reads from our look up table and 16 reads from our roundkey per thread. To help reduce latency we move these into shared memory. 
+
+Now, upon launch one thread can read in all of our keys and look up table and every thread in the block can read from shared memory as opposed to main memory. 
+
+Barring any bank conflicts a shared memory read costs around two cycles. This removes the stereotypical memory bottleneck.
 
 ## Byte Level
 
@@ -146,6 +134,30 @@ Each round we must perform 16 reads from our look up table and 16 reads from our
 At a byte level we utilize shared memory the same data structures of block level but we must also share the 16 bytes we are working on.
 
 When operating at a byte granularity we need to move the data we want to transform, our key, and our look up table. So the shared memory cost is a bit higher. Specifically, for a GPU blocksize of 256 we need to bring an extra 256 bytes to shared memory. 256 bytes is not a significant amount of shared memory space. With byte level granularity we get the same benefit of exploiting the use of shared memory for transforming our text.
+
+# Performance Analysis
+
+![](img/all_large.png)
+
+![](img/smalldata_all.png)
+
+As we compare across GPU and CPU we begin to see the benefit of parallel processing. Even at 4kbytes the CPU is orders of magnitude slower. 
+
+On a 183Mb file our GPU is a whopping 250 times faster block style and even 33 times faster byte style. 
+
+![](img/bytevblock.png)
+
+![](img/bytevblocklarge.png)
+
+Looking at our performance of byte vs block we see that in smaller data sets (4k - 30k) The byte and block style have similar run times. But as soon as we get into higher than 30k this difference is apparent and we see that block style is more effective. 
+
+With larger files we are launching orders of magnitude more threads. 
+
+for example, a 32kb file will want 32k threads in byte granularity but with block grannularity we launch 2k threads. Since all of our data lives in shared memory scheduling threads very frequently slows down the process. If say, we were doing main memory reads more threads could potentially mean we can hide these memory latencies.
+
+As expected, at some point the benefit to launching a new thread diminshes.
+
+So, it looks like the saying of too many cooks in the kitchen is indeed true in this case.
 
 ## Varying BlockSizes
 
