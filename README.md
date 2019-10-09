@@ -9,7 +9,6 @@ CUDA AES encryption
 * Tested on: Windows 10, i5, Nvidia GTX 1660 (Personal)
 
 - [Repo Contents](#Repo-Contents)
-
 - [AES Overview](#AES-Overview)
 	- [Cipher](#Cipher)
 		- [Mix Columns](#Mix-Columns)
@@ -18,14 +17,11 @@ CUDA AES encryption
   		- [Add Round Key](#Add-Round-Key)
   	- [ECB Mode](#ECB-Mode)
   	- [CTR Mode](#CTR-Mode)
-
 - [Algorithm Overview](#Algorithm-Overview)
-
 - [Performance Analysis](#Performance-Analysis)
   - [Block Level](#Block-Level)
   - [Byte Level](#Byte-Level)
   - [Compiler Exploits](#Compiler-Exploits)
-
 - [Resources](#Resources)
 
 # Repo Contents
@@ -53,13 +49,13 @@ The term cipher in AES refers to how the encryption is handled. In the case of A
 
 each column is combined using an inertible linear transformation.
 
-![](img/mixcolumns.PNG)
+![](img/mixcolumns.PNG){ width=50% }
 
 ### Shift Rows 
 
 bytes are shifted by row accordign to which row they are in.
 
-![](img/shiftrows.PNG)
+![](img/shiftrows.PNG){ width=50% }
 
 ### Sub Bytes
 
