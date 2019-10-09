@@ -15,7 +15,7 @@ CUDA AES encryption
   		- [Shift Rows](#Shift-Rows)
   		- [Sub Bytes](#Sub-Bytes)
   		- [Add Round Key](#Add-Round-Key)
-  	- [ECB Mode](#ECB-Mode)
+  	- [ECB Mode](#Electronic-Code-Book-(ECB)-Mode)
   	- [CTR Mode](#CTR-Mode)
 - [Algorithm Overview](#Algorithm-Overview)
   - [Block Level](#Block-Level)
