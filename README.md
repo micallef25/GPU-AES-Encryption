@@ -15,7 +15,7 @@ CUDA AES encryption
   		- [Shift Rows](#Shift-Rows)
   		- [Sub Bytes](#Sub-Bytes)
   		- [Add Round Key](#Add-Round-Key)
-  	- [Electronic Code Book (ECB) Mode](#Electronic-Code-Book-(ECB)-Mode)
+  	- [ECB Mode](#Electronic-Code-Book-Mode)
   	- [Counter (CTR) Mode](#CTR-Mode)
 - [Algorithm Overview](#Algorithm-Overview)
   - [Block Level](#Block-Level)
@@ -75,7 +75,7 @@ Each byte of the current state transformation is XOR'd with the roundkey
 
 ![](img/addroundkey.PNG)
 
-## Electronic Code Book (ECB) Mode
+## Electronic Code Book Mode
 
 ![](img/ecb.PNG)
 
