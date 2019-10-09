@@ -151,6 +151,8 @@ With byte level granularity we get the same benefit of exploiting the use of sha
 
 ![](img/all_large.png)
 
+![](img/all_large_raw.png)
+
 ![](img/smalldata_all.png)
 
 As we compare across GPU and CPU we begin to see the benefit of parallel processing. Even at 4kbytes the CPU is orders of magnitude slower. 
