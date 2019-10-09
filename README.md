@@ -171,10 +171,16 @@ So, it looks like the saying of too many cooks in the kitchen is indeed true in 
 
 ## Varying BlockSizes
 
-Results were gathered with a blocksize of 32,64,128 and 256 on the GPU. As well as encryption modes of 128bits, 192bits and 256 bits. The results were rather uninteresting as it did not play a huge role in timing. For example, encrypting AES 128 vs AES 256 only added a couple milliseconds in a file size of 100MB. 
+Results were gathered with a blocksize of 32,64,128 and 256 on the GPU. As well as encryption modes of 128bits, 192bits and 256 bits. The results were rather uninteresting as it did not play a huge role in timing.
 
-TODO add graphs
-TODO talk about implementation?
+The graph below shows the difference when doing a 128 bit 192 bit or 256 bit encryption. For 256 bit encryption we do more rounds of transformations. The difference in encryption is more noticeable in byte level but not hardly noticeable in block level.  
+
+![](img/differingkeys.png)
+
+The graph below shows the difference in changing the blocksize. In the byte level granularity we see that changing the block size does have an impact on the system. But for block level granularity changing this parameter has very minimal effect.
+
+![](img/differingblocks.png)
+
 
 ## Compiler Exploits
 
