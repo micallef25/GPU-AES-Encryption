@@ -32,9 +32,7 @@ The CPU benchmark is written in C, The GPU benchmark is written in CUDA.
 
 The GPU has two different methods for encrypting and decrypting. One can encrypt and decypt at the granularity of a byte or a block. Performance and details are discussed below.
 
-Me after implementing a cryptography algorithm.
-
-![Alt Text](https://media.giphy.com/media/Z543HuFdQAmkg/giphy.gif)
+All data gathered can be found excel sheet but there is alot so all data is not discussed.
 
 # AES Overview
 
@@ -49,13 +47,13 @@ The term cipher in AES refers to how the encryption is handled. In the case of A
 
 each column is combined using an inertible linear transformation.
 
-![](img/mixcolumns.PNG){ width=50% }
+![](img/mixcolumns.PNG)
 
 ### Shift Rows 
 
 bytes are shifted by row accordign to which row they are in.
 
-![](img/shiftrows.PNG){ width=50% }
+![](img/shiftrows.PNG)
 
 ### Sub Bytes
 
@@ -141,14 +139,18 @@ At a block level each thread reads its respective 16 bytes and begins its transf
 
 Each round we must perform 16 reads from our look up table and 16 reads from our roundkey per thread. To help reduce latency we move these into shared memory. Now upon launch one thread can read in all of our keys and look up table and every thread in the block can read from shared memory as opposed to main memory. Barring any bank conflicts a shared memory read costs around two cycles. This removes the stereotypical memory bottleneck.
 
-
 ## Byte Level
 
 ![](img/bytelevel.png)
 
-At a byte level we utilize shared memory much more than block level.
+At a byte level we utilize shared memory the same data structures of block level but we must also share the 16 bytes we are working on.
 
-When operating at a byte granularity we need to move the data we want to transform, our key, and our look up table. So the shared memory cost is a bit higher. We get the same benefit of exploiting the use of shared memory for transforming our text.
+When operating at a byte granularity we need to move the data we want to transform, our key, and our look up table. So the shared memory cost is a bit higher. Specifically, for a GPU blocksize of 256 we need to bring an extra 256 bytes to shared memory. 256 bytes is not a significant amount of shared memory space. With byte level granularity we get the same benefit of exploiting the use of shared memory for transforming our text.
+
+## Varying BlockSizes
+
+Results were gathered with a blocksize of 32,64,128 and 256 on the GPU. As well as encryption modes of 128bits, 192bits and 256 bits. The results were rather uninteresting as it did not play a huge role in timing. For example, encrypting AES 128 vs AES 256 only added a couple milliseconds in a file size of 100MB. 
+
 
 ## Compiler Exploits
 
@@ -157,6 +159,10 @@ I spent some time using the unroll pragma on some of the my loops. As well as tr
 I did see some speed up by doing this but then realized an optimized compiler will just do this stuff for me... so... really it was not the most efficient use of my time. 
 
 # Resources
+
+If you too want to become a leet hacker refer to resources below
+
+![Alt Text](https://media.giphy.com/media/Z543HuFdQAmkg/giphy.gif)
 
 ## Understanding AES encryption/decryption
 
