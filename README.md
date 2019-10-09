@@ -153,6 +153,8 @@ As we compare across GPU and CPU we begin to see the benefit of parallel process
 
 On a 183Mb file our GPU is a whopping 250 times faster block style and 33 times faster byte style. 
 
+TODO cahnge the title to show alrge and big files
+
 ![](img/bytevblock.png)
 
 ![](img/bytevblocklarge.png)
@@ -171,6 +173,8 @@ So, it looks like the saying of too many cooks in the kitchen is indeed true in 
 
 Results were gathered with a blocksize of 32,64,128 and 256 on the GPU. As well as encryption modes of 128bits, 192bits and 256 bits. The results were rather uninteresting as it did not play a huge role in timing. For example, encrypting AES 128 vs AES 256 only added a couple milliseconds in a file size of 100MB. 
 
+TODO add graphs
+TODO talk about implementation?
 
 ## Compiler Exploits
 
