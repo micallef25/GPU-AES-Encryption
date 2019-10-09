@@ -16,7 +16,7 @@ CUDA AES encryption
   		- [Sub Bytes](#Sub-Bytes)
   		- [Add Round Key](#Add-Round-Key)
   	- [ECB Mode](#Electronic-Code-Book-Mode)
-  	- [Counter (CTR) Mode](#CTR-Mode)
+  	- [CTR Mode](#Counter-Mode)
 - [Algorithm Overview](#Algorithm-Overview)
   - [Block Level](#Block-Level)
   - [Byte Level](#Byte-Level)
@@ -90,7 +90,7 @@ As shown we can still get a sense of what the file looks like even after encrypt
 ![](img/ecbflaw.png)
 
 
-## Counter (CTR) Mode
+## Counter Mode
 
 ![](img/ctr.PNG)
 
