@@ -9,7 +9,7 @@ CUDA AES encryption
 * Tested on: Windows 10, i5, Nvidia GTX 1660 (Personal)
 
 - [Repo Contents](#Repo-Contents)
-- [AES Overview](#Advanced Encryption Schema Overview)
+- [AES Overview](#Advanced-Encryption-Schema-Overview)
 	- [Cipher](#Cipher)
 		- [Mix Columns](#Mix-Columns)
   		- [Shift Rows](#Shift-Rows)
