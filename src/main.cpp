@@ -58,6 +58,8 @@ int main(int argc, char** argv) {
 	AES_init_ctx_iv(&ctx_ctr, aes_cpu_ctr->keys,(uint8_t*)aes_cpu_ctr->ctr_iv);
 	AES_init_ctx_iv(&ctx_ctr2, aes_cpu_ctr->keys, (uint8_t*)aes_cpu_ctr->ctr_iv);
 
+	std::cout << "Encrypting " << aes_cpu->padded_length << "bytes " << std::endl;
+
 	// 
 	// RUN TESTS
 	//
