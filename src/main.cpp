@@ -86,23 +86,23 @@ int main(int argc, char** argv) {
 
 	//aes::Common::write_to_file(aes_cpu->data, aes_block->padded_length);
 
-	int byepass = memcmp(aes_cpu->data, aes_byte->data, aes_byte->padded_length);
-	if (byepass == 0)
-	{
-		std::cout << "encrypted successfully" << std::endl;
-	}
-	else {
-		std::cout << "AES at a byte level failed " << std::endl;
-	}
+	//int byepass = memcmp(aes_cpu->data, aes_byte->data, aes_byte->padded_length);
+	//if (byepass == 0)
+	//{
+	//	std::cout << "encrypted successfully" << std::endl;
+	//}
+	//else {
+	//	std::cout << "AES at a byte level failed " << std::endl;
+	//}
 
-	int byteass = memcmp(aes_cpu->data, aes_block->data, aes_byte->padded_length);
-	if (byteass == 0)
-	{
-		std::cout << "encrypted successfully" << std::endl;
-	}
-	else {
-		std::cout << "AES at a byte level failed " << std::endl;
-	}
+	//int byteass = memcmp(aes_cpu->data, aes_block->data, aes_byte->padded_length);
+	//if (byteass == 0)
+	//{
+	//	std::cout << "encrypted successfully" << std::endl;
+	//}
+	//else {
+	//	std::cout << "AES at a byte level failed " << std::endl;
+	//}
 
 	// DECRPYT BLOCK LEVEL
 	aes::block_level::aes_decrypt_block(aes_block);
@@ -175,6 +175,6 @@ int main(int argc, char** argv) {
 	aes::Common::destroy_aes_struct(aes_ctr);
 	aes::Common::destroy_aes_struct(aes_cpu_ctr);
 
-    system("pause"); // stop Win32 console from closing on exit
+    //system("pause"); // stop Win32 console from closing on exit
 
 }

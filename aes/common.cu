@@ -71,7 +71,7 @@ namespace aes {
 
 		void aes::Common::write_to_file(uint8_t* data, uint32_t length)
 		{
-			std::ofstream outFile("decrypt");
+			std::ofstream outFile("rainier1.bin");
 			if ( outFile.is_open() )
 			{
 				for (int i = 0; i < length; i++)

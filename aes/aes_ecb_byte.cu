@@ -194,7 +194,7 @@ namespace aes {
 
 			__shared__ uint8_t e_key[MAX_EKEY_LENGTH];
 			__shared__ uint8_t buf_t[blockSize1d]; // thread buffer
-			__shared__ uint64_t row_map_s[blockSize1d];
+			__shared__ uint8_t row_map_s[blockSize1d];
 			__shared__ uint8_t s_sbox[256];
 
 			uint8_t copy_bytes = 0;
@@ -210,11 +210,6 @@ namespace aes {
 				memcpy(e_key, &key_d[0], key_length);
 				memcpy(row_map_s, row_map, blockSize1d);
 				memcpy(s_sbox, sbox_d, sizeof(uint8_t) * 256);
-//#pragma unroll
-				//for (uint8_t b = 0; b < blockSize1d; b += sizeof(uint64_t)) {
-				//	uint64_t *val = (uint64_t*)row_map[b * sizeof(uint64_t)];
-				//	row_map_s[b] = *val;
-				//}
 			}
 		
 			__syncthreads();
@@ -225,7 +220,7 @@ namespace aes {
 			{
 				aes_subBytes_byte(block_index, buf_t,s_sbox);
 				//
-				aes_shiftRows_byte(block_index, buf_t, (uint8_t*)row_map_s);
+				aes_shiftRows_byte(block_index, buf_t, row_map_s);
 				//
 				aes_mixColumns_byte(block_index, buf_t);
 				//
@@ -233,7 +228,7 @@ namespace aes {
 			}
 			aes_subBytes_byte(block_index, buf_t,s_sbox);
 			//
-			aes_shiftRows_byte(block_index, buf_t, (uint8_t*)row_map_s);
+			aes_shiftRows_byte(block_index, buf_t, row_map_s);
 			//
 			aes_addRoundKey_byte(aes_index, block_index, buf_t, &e_key[key_length-AES_BLOCK_SIZE]);
 			__syncthreads();
