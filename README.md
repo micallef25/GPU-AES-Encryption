@@ -29,6 +29,8 @@ The GPU has two different methods for encrypting and decrypting. One can encrypt
 
 # AES Overview
 
+<iframe src="https://giphy.com/embed/Z543HuFdQAmkg" width="480" height="270" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/hacker-Z543HuFdQAmkg">via GIPHY</a></p>
+
 AES is a highly popular cryptography algorithm. This algorithm allows the user to encrpyt and decrypt files using a key. There are modes ECB, CBC, OFB, CFB, CTR each offering a different way of encrypting and decrypting files. 
 
 ## ECB Mode
