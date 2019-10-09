@@ -14,15 +14,16 @@ CUDA AES encryption
   - [ECB Mode](#ECB-Mode)
   - [CTR Mode](#CTR-Mode)
 
-- [Algorithm Overview](#AES-Overview)
-  - [column](#ECB-Mode)
-  - [row](#CTR-Mode)
-  - [addroundkey](#add-roundkey)
-  - [subbytes](#subbyte)
+- [Algorithm Overview](#Algorithm-Overview)
+  - [Mix Columns](#Mix-Columns)
+  - [Shift Rows](#Shift-Rows)
+  - [Sub Bytes](#Sub-Bytes)
+  - [Add Round Key](#Add-Round-Key)
 
 - [Performance Analysis](#Performance-Analysis)
   - [Block Level](#Block-Level)
   - [Byte Level](#Byte-Level)
+  - [Compiler Exploits](#Compiler-Exploits)
 
 - [Resources](#Resources)
 
@@ -49,7 +50,7 @@ Lorem ipsum... (the added text)
 
 ![](img/ctr.PNG)
 
-# Algorithm
+# Algorithm Overview
 
 AES128, AES192 and AES256 all follow the same schema where we continually transform our input data over a set of rounds and a fixed size key.
 
@@ -67,19 +68,19 @@ The most confusing... each column is combined using an inertible linear transfor
 
 ![](img/mixcolumns.PNG)
 
-## shift rows 
+## Shift Rows 
 
 bytes are shifted by row accordign to which row they are in.
 
 ![](img/shiftrows.PNG)
 
-## sub bytes
+## Sub Bytes
 
 Each byte is substituted with the value in the pre computed look up table
 
 ![](img/subbytes.PNG)
 
-## add round key
+## Add Round Key
 
 Each byte of the current state transformation is XOR'd with the roundkey
 
@@ -88,7 +89,7 @@ Each byte of the current state transformation is XOR'd with the roundkey
 # Performance Analysis
 Since AES can be parrallelized in a few different ways I chose to investigate the question how much parrallelism is too much? 
 
-From analyzing the algorithm you can see you can split it at a block level granularity where each thread operates on one 16 byte block. 
+From analyzing the algorithm you can split it at a block level granularity where each thread operates on one 16 byte block. 
 
 We can also split it up where each thread works on a single byte in the 16 byte block. 
 
@@ -104,7 +105,7 @@ operating at a byte level seems a bit of overkill but you never really know unti
 
 At a block level each thread reads its respective 16 bytes and begins its transformations.
 
-shared memory is used to store the look up table so threads can do quick look ups as opposed to slow main memory look ups and the key is also brought into shared memory for quick lookups as well. Each round we have to do 16 key read and 16 reads from our look up table so it makes sense to move them into faster memory for the blocks to utilize.
+Each round we must perform 16 reads from our look up table and 16 reads from our roundkey per thread. To help reduce latency we move these into shared memory. Now upon launch one thread can read in all of our keys and look up table and every thread in the block can read from shared memory as opposed to main memory. Barring any bank conflicts a shared memory read costs around two cycles. This removes the stereotypical memory bottleneck.
 
 
 ## Byte Level
@@ -113,8 +114,13 @@ shared memory is used to store the look up table so threads can do quick look up
 
 At a byte level we utilize shared memory much more than block level.
 
-When operating at a byte level we move the data we want to transform, our key, our look up table as well as a map to figure out which row to write to for one of the transformations. This utilizes. With moderate sized files this method actually surpassed block level in terms of speed to decrpyt and encrypt but for larger files the block level is much better.
+When operating at a byte granularity we need to move the data we want to transform, our key, and our look up table. So the shared memory cost is a bit higher. We get the same benefit of exploiting the use of shared memory for transforming our text.
 
+## Compiler Exploits
+
+I spent some time using the unroll pragma on some of the my loops. As well as trying to utilize my memory bus by making my own memcopy by typecasting to 64 bits to send bigger chunks of data. This inspiration came from talking to my classmate Taylor Nelms after he had mentioned he did something similar.
+
+I did see some speed up by doing this but then realized an optimized compiler will just do this stuff for me... so... really it was not the most efficient use of my time. 
 
 # Resources
 
