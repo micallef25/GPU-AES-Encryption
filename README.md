@@ -25,20 +25,24 @@ CUDA AES encryption
 - [Resources](#Resources)
 
 # Repo Contents
-This repo contains code that benchmarks the well known cryptography AES algorithms.
+This repo contains code that benchmarks the well known cryptography Advanced Encryption Schema algorithms.
+
 We run ECB and CTR modes on both the CPU and GPU to see the benefits that can be obtained with highly parallel algorithms on highly parallel hardware.
 
 The CPU benchmark is written in C, The GPU benchmark is written in CUDA.
 
 The GPU benchmark has two different methods for encrypting and decrypting. One can encrypt and decypt at the granularity of a byte or a block. Performance and details are discussed below.
 
-All data gathered can be found in the excel sheet in the root home directory but there is alot, so all data is not discussed.
+All data gathered can be found in the excel sheet in the root home directory.
 
 # Advanced Encryption Schema (AES) Overview
 
 AES is a highly popular cryptography algorithm. 
+
 AES is a symmetric key algorithm meaning you use the same key to encrypt and decrypt ypur input. 
-There exist modes ECB, CBC, OFB, CFB, CTR each offering 128 bit, 192bit and 256 bit level encryption. Each mode goes about encrypting the data set in a different manner. This repo focuses on ECB and CTR mode encryption.
+
+There exist modes ECB, CBC, OFB, CFB, CTR each offering 128 bit, 192bit and 256 bit level encryption. Each mode goes about encrypting 
+the data set in a different manner. This repo focuses on ECB and CTR mode encryption.
 
 ## Cipher
 
@@ -163,7 +167,7 @@ Looking at our performance of byte vs block we see that in smaller data sets (4k
 
 With larger files we are launching orders of magnitude more threads. 
 
-for example, a 32kb file will want 32k threads in byte granularity but with block grannularity we launch 2k threads. Since all of our data lives in shared memory scheduling threads very frequently slows down the process. If say, we were doing main memory reads more threads could potentially mean we can hide these memory latencies.
+for example, a 32kb file will want 32k threads in byte granularity but with block grannularity we launch 2k threads. Since all of our data lives in shared memory scheduling threads very frequently slows down the process. If say, we were doing main memory reads than adding more threads could help because as threads are waiting for memory other threads can be doing work. But since our data lives close we do not have this bottleneck.
 
 As expected, at some point the benefit to launching a new thread diminshes.
 
@@ -177,14 +181,17 @@ The graph below shows the difference when doing a 128 bit 192 bit or 256 bit enc
 
 ![](img/differingkey.png)
 
+![](img/differing_keys_raw.png)
+
 The graph below shows the difference in changing the blocksize. In the byte level granularity we see that changing the block size does have an impact on the system. But for block level granularity changing this parameter has very minimal effect.
 
 ![](img/differingblocks.png)
 
+![](img/differingblocksizes.png)
 
 ## Compiler Exploits
 
-I spent some time using the unroll pragma on some of the my loops. As well as trying to utilize my memory bus by making my own memcopy by typecasting to 64 bits to send bigger chunks of data. This inspiration came from talking to my classmate Taylor Nelms after he had mentioned he did something similar.
+I spent some time using the unroll pragma on some of the my loops. As well as trying to utilize the memory bus a bit more effectively  by making my own memcopy and typecasting to 64 bits to send bigger chunks of data. This inspiration came from talking to my classmate Taylor Nelms after he had mentioned he did something similar.
 
 I did see some speed up by doing this but then realized an optimized compiler will just do this stuff for me... so... really it was not the most efficient use of my time. 
 
