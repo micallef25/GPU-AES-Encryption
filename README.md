@@ -181,13 +181,13 @@ The graph below shows the difference when doing a 128 bit 192 bit or 256 bit enc
 
 ![](img/differingkey.png)
 
-![](img/differing_keys_raw.png)
+![](img/differing_keys_raw.PNG)
 
 The graph below shows the difference in changing the blocksize. In the byte level granularity we see that changing the block size does have an impact on the system. But for block level granularity changing this parameter has very minimal effect.
 
 ![](img/differingblocks.png)
 
-![](img/differingblocksizes.png)
+![](img/differingblocksizes.PNG)
 
 ## Compiler Exploits
 
