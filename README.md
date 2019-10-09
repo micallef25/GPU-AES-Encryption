@@ -30,29 +30,29 @@ We run ECB and CTR modes on both the CPU and GPU to see the benefits that can be
 
 The CPU benchmark is written in C, The GPU benchmark is written in CUDA.
 
-The GPU has two different methods for encrypting and decrypting. One can encrypt and decypt at the granularity of a byte or a block. Performance and details are discussed below.
+The GPU benchmark has two different methods for encrypting and decrypting. One can encrypt and decypt at the granularity of a byte or a block. Performance and details are discussed below.
 
-All data gathered can be found excel sheet but there is alot so all data is not discussed.
+All data gathered can be found in the excel sheet in the root home directory but there is alot, so all data is not discussed.
 
 # AES Overview
 
 AES is a highly popular cryptography algorithm. 
-AES is a symmetric key algorithm meaning you use the same key to encrypt or decrypt a file. 
+AES is a symmetric key algorithm meaning you use the same key to encrypt and decrypt ypur input. 
 There exist modes ECB, CBC, OFB, CFB, CTR each offering 128 bit, 192bit and 256 bit level encryption. Each mode goes about encrypting the data set in a different manner. This repo focuses on ECB and CTR mode encryption.
 
 ## Cipher
 
-The term cipher in AES refers to how the encryption is handled. In the case of AES this involves transforming our bytes through a series of rounds. each round is previuously illustrated and shown below.
+The term cipher in AES refers to how the encryption is handled. In the case of AES this involves transforming our bytes through a series of rounds. each round is illustrated and shown below.
 
 ### Mix Columns
 
-each column is combined using an inertible linear transformation.
+each column is combined using an invertible linear transformation.
 
 ![](img/mixcolumns.PNG)
 
 ### Shift Rows 
 
-bytes are shifted by row accordign to which row they are in.
+bytes are shifted by row according to which row they are in.
 
 ![](img/shiftrows.PNG)
 
@@ -72,9 +72,13 @@ Each byte of the current state transformation is XOR'd with the roundkey
 
 ![](img/ecb.PNG)
 
-ECB mode is one mode implemented for benchmarking in this repo. It is highly parallelizable. From the diagram above we can see how the algorithm works. We inject our plaintext and key into the cipher and our output data is now encrypted with the provided key. 
+ECB mode is one mode implemented for benchmarking in this repo. It is highly parallelizable. From the diagram above we can see how the algorithm works. 
 
-The major flaw with ECB mode is that this mode replicates patterns. So you could have an encrypted image that looks something like below where the middle image is encrypted using ECB mode and the right is using any other mode. As shown we can still see the image pretty clearly even after encryption has completed. Other modes address this issue by addinga bit of pseudo randomness into the cipher.
+We inject our plaintext and key into the cipher and our output data is now encrypted with the provided key. 
+
+The major flaw with ECB mode is that this mode replicates patterns. So you could have an encrypted image that looks something like below where the middle image is encrypted using ECB mode and the right is using any other mode. 
+
+As shown we can still get a sense of what the file looks like even after encryption has completed. Other modes address this issue by addinga bit of pseudo randomness into the cipher.
 
 ![](img/ecbflaw.png)
 
@@ -85,7 +89,7 @@ The major flaw with ECB mode is that this mode replicates patterns. So you could
 
 From the diagram we see that CTR mode has the same ciphering scheme but, instead of our plain text being injected we cipher an initialization vector. 
 
-an initialization vector or IV contains a 32 bit nonce, 32 bit counter and 64 bit unique value.
+an initialization vector (or IV) contains a 32 bit nonce, 32 bit counter and 64 bit unique value. The nonce and unique value in implementation do have to fulfill certain requirements. In short, the nonce must be unique and not used with any other key, but does not necessarily have to be hidden from attackers. More information can be found here: https://tools.ietf.org/html/rfc3686#section-2.1.
 
 after ciphering this IV we XOR it with our output to generate our encrypted file. The counter in the lower 32 bits of the IV add the pseudo randomness which fixes the issue that ECB has.
 
@@ -95,7 +99,7 @@ The nice thing about CTR mode is that your decrpytion and encryption are the sam
 
 AES128, AES192 and AES256 all follow the same schema where we continually transform our input data over a set of rounds and a fixed size key.
 
-For AES 128 we have a fixed size key of 16bytes, an expanded key of 176bytes and 10 rounds of transformations that each 16 bytes of data must go through.
+For AES 128 we have a fixed size key of 16 bytes, an expanded key of 176bytes and 10 rounds of transformations that each 16 bytes of data must go through.
 
 For AES 192 we have a fixed size key of 24 bytes, an expanded key of 204 bytes and 12 rounds of transformations that the 16 bytes of data must go through
 
@@ -133,7 +137,11 @@ Barring any bank conflicts a shared memory read costs around two cycles. This re
 
 At a byte level we utilize shared memory the same data structures of block level but we must also share the 16 bytes we are working on.
 
-When operating at a byte granularity we need to move the data we want to transform, our key, and our look up table. So the shared memory cost is a bit higher. Specifically, for a GPU blocksize of 256 we need to bring an extra 256 bytes to shared memory. 256 bytes is not a significant amount of shared memory space. With byte level granularity we get the same benefit of exploiting the use of shared memory for transforming our text.
+When operating at a byte granularity we need to move the data we want to transform, our key, and our look up table. So the shared memory cost is a bit higher. 
+
+Specifically, for a GPU blocksize of 256 we need to bring an extra 256 bytes to shared memory. 256 bytes is not a significant amount of shared memory space. 
+
+With byte level granularity we get the same benefit of exploiting the use of shared memory for transforming our text.
 
 # Performance Analysis
 
@@ -143,7 +151,7 @@ When operating at a byte granularity we need to move the data we want to transfo
 
 As we compare across GPU and CPU we begin to see the benefit of parallel processing. Even at 4kbytes the CPU is orders of magnitude slower. 
 
-On a 183Mb file our GPU is a whopping 250 times faster block style and even 33 times faster byte style. 
+On a 183Mb file our GPU is a whopping 250 times faster block style and 33 times faster byte style. 
 
 ![](img/bytevblock.png)
 
