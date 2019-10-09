@@ -25,6 +25,8 @@ CUDA AES encryption
 - [Resources](#Resources)
 
 # Repo Contents
+Please note, since this repo uses submodules will need to use git clone --recurse. 
+
 This repo contains code that benchmarks the well known cryptography Advanced Encryption Schema algorithms.
 
 We run ECB and CTR modes on both the CPU and GPU to see the benefits that can be obtained with highly parallel algorithms on highly parallel hardware.
