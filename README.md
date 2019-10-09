@@ -34,7 +34,7 @@ The GPU benchmark has two different methods for encrypting and decrypting. One c
 
 All data gathered can be found in the excel sheet in the root home directory but there is alot, so all data is not discussed.
 
-# AES Overview
+# Advanced Encryption Schema (AES) Overview
 
 AES is a highly popular cryptography algorithm. 
 AES is a symmetric key algorithm meaning you use the same key to encrypt and decrypt ypur input. 
@@ -68,7 +68,7 @@ Each byte of the current state transformation is XOR'd with the roundkey
 
 ![](img/addroundkey.PNG)
 
-## ECB Mode
+## Electronic Code Book (ECB) Mode
 
 ![](img/ecb.PNG)
 
@@ -83,7 +83,7 @@ As shown we can still get a sense of what the file looks like even after encrypt
 ![](img/ecbflaw.png)
 
 
-## CTR Mode
+## Counter (CTR) Mode
 
 ![](img/ctr.PNG)
 
