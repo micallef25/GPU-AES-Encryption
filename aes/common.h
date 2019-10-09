@@ -15,7 +15,7 @@
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
 
 #define AES_BLOCK_SIZE 16
-#define blockSize1d 32
+#define blockSize1d 128
 #define MAX_EKEY_LENGTH 240
 
 #define F(x)   (((x)<<1) ^ ((((x)>>7) & 1) * 0x1b))

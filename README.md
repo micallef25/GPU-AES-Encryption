@@ -182,3 +182,4 @@ I did see some speed up by doing this but then realized an optimized compiler wi
 ## Pictures 
 
 * ECB / CTR / AES algorith pictures taken from wikipedia
+
