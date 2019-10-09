@@ -175,7 +175,7 @@ Results were gathered with a blocksize of 32,64,128 and 256 on the GPU. As well 
 
 The graph below shows the difference when doing a 128 bit 192 bit or 256 bit encryption. For 256 bit encryption we do more rounds of transformations. The difference in encryption is more noticeable in byte level but not hardly noticeable in block level.  
 
-![](img/differingkeys.png)
+![](img/differingkey.png)
 
 The graph below shows the difference in changing the blocksize. In the byte level granularity we see that changing the block size does have an impact on the system. But for block level granularity changing this parameter has very minimal effect.
 
