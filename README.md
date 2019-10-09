@@ -22,7 +22,7 @@ CUDA AES encryption
   - [Byte Level](#Byte-Level)
 - [Performance Analysis](#Performance-Analysis)
   - [Compiler Exploits](#Compiler-Exploits)
-  - [Varying BlockSize](#Varying-BlockSize)
+  - [Varying BlockSizes](#Varying-BlockSizes)
 - [Resources](#Resources)
 
 # Repo Contents
