@@ -128,7 +128,7 @@ Upon launch, one thread can read in all of the keys and look-up table and every 
 Below is a chart that one of Nvidia's tool generates when performing an analysis.
 I found this chart to be neat as we can see more explicitly where are data lives. From the chart we what we expect from the program. We see alot of shared memory reads and a few global memory reads and writes. This is expected as we must read data from global memory into shared memory perform computations and then write back.
 
-![](img/blockmem.png)
+![](img/blockmem.PNG)
 
 ## Byte Level
 
@@ -140,7 +140,7 @@ Specifically, for a GPU block size of 256 we need to bring an extra 256 bytes to
 
 Similarly to the block level analysis we have a chart from Nvidia's performance analysis tool. Again, We see similar behavior. We have more data reads and writes but, we have to place more data to operate on into shared memory so, this is why we see a higher number. 
 
-![](img/bytemem.png)
+![](img/bytemem.PNG)
 
 # Performance Analysis
 
