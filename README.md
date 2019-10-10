@@ -215,3 +215,7 @@ If you too want to become a leet hacker refer to resources below
 
 * ECB / CTR / AES algorith pictures taken from wikipedia
 
+## Proof
+
+![](img/proof.PNG)
+
