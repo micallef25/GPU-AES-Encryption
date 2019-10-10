@@ -138,7 +138,7 @@ At a byte level we utilize shared memory and the same data structures of block-l
 
 Specifically, for a GPU block size of 256 we need to bring an extra 256 bytes to shared memory. 256 bytes is not a significant amount of shared memory space. With byte-level granularity we get the same benefit of exploiting the use of shared memory for transforming our text.
 
-Similarly to the block level analysis we have a chart from Nvidia's performance analysis tool. Again, We see similar behavior. We have more data reads and writes but, we have to place more data to operate on into shared memory so, tthis is why we see a higher number. 
+Similarly to the block level analysis we have a chart from Nvidia's performance analysis tool. Again, We see similar behavior. We have more data reads and writes but, we have to place more data to operate on into shared memory so, this is why we see a higher number. 
 
 ![](img/bytemem.png)
 
