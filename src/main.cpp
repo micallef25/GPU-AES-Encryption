@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
 	else {
 		std::cout << "AES failed " << std::endl;
 	}
-	pass = memcmp(aes_original->data, aes_byte->data,padded_length);
+	pass = memcmp(aes_original->data, aes_block->data,padded_length);
 	if (pass == 0)
 	{
 		std::cout << "decrypted GPU at a byte level successfully" << std::endl;
